@@ -1,5 +1,6 @@
 dependencies {
     implementation(project(":video-core:core-usecase"))
+    implementation(project(":video-core:core-domain"))
 
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-security")
