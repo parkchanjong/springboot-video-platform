@@ -1,5 +1,5 @@
 package com.videoservice.manager;
 
-public interface UserSessionPort {
+public interface SubscribePort {
 
 }

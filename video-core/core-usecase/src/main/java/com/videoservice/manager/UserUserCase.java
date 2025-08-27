@@ -1,4 +1,4 @@
-package com.videoservice.manager.user;
+package com.videoservice.manager;
 
 public interface UserUserCase {
 }
