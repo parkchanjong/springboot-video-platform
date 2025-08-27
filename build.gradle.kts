@@ -12,7 +12,7 @@ plugins {
 }
 
 allprojects {
-    group = "fast.campus"
+    group = "com.videoservice"
     version = "1.0-SNAPSHOT"
 
     repositories {
