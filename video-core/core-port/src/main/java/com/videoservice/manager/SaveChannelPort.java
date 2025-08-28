@@ -1,5 +1,7 @@
 package com.videoservice.manager;
 
-public interface SaveChannelPort {
+import com.videoservice.manager.channel.Channel;
 
+public interface SaveChannelPort {
+    void saveChannel(Channel channel);
 }
