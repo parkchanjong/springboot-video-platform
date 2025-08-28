@@ -1,14 +1,14 @@
 services:
   mysql:
     image: mysql:8.0
-    container_name: videoservice-mysql
+    container_name: video-service-mysql
     volumes:
-      - ./mysql/my.cnf:/etc/mysql/conf.d/videoservice.cnf
+      - ./mysql/my.cnf:/etc/mysql/conf.d/video-service.cnf
       - ./mysql/data:/var/lib/mysql
     ports:
       - '3306:3306'
     environment:
-      - MYSQL_DATABASE=videoservice
+      - MYSQL_DATABASE=video-service
       - MYSQL_USER=local
       - MYSQL_PASSWORD=local
       - MYSQL_ROOT_PASSWORD=admin
@@ -16,12 +16,12 @@ services:
       - MYSQL_RANDOM_ROOT_PASSWORD=admin
   redis:
     image: redis:7.2.5
-    container_name: videoservice-redis
+    container_name: video-service-redis
     ports:
       - '6379:6379'
   mongodb:
     image: mongo:6.0.16
-    container_name: videoservice-mongodb
+    container_name: video-service-mongodb
     ports:
       - 27017:27017
     volumes:
@@ -29,4 +29,4 @@ services:
     environment:
       - MONGO_INITDB_ROOT_USERNAME=local
       - MONGO_INITDB_ROOT_PASSWORD=local
-      - MONGO_INITDB_DATABASE=videoservice
+      - MONGO_INITDB_DATABASE=video-service
