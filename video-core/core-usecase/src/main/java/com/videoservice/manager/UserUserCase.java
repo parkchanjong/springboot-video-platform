@@ -1,5 +1,7 @@
 package com.videoservice.manager;
 
-public interface UserUserCase {
-}
+import com.videoservice.manager.user.User;
 
+public interface UserUserCase {
+    User getUser(String userId);
+}
