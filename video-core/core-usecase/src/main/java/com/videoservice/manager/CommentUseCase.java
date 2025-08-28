@@ -6,7 +6,7 @@ import com.videoservice.manager.comment.CommentResponse;
 import com.videoservice.manager.user.User;
 import java.util.List;
 
-public interface CommentUseCase {
+public interface CommentUseCase  {
     Comment createComment(User user, CommentCommand commentCommand);
 
     Comment updateComment(String commentId, User user, CommentCommand commentCommand);
