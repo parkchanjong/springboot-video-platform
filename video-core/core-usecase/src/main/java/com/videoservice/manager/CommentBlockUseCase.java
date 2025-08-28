@@ -1,5 +1,7 @@
 package com.videoservice.manager;
 
-public interface CommentBlockUseCase {
+import com.videoservice.manager.user.User;
 
+public interface CommentBlockUseCase {
+    void blockComment(User user, String commentId);
 }
