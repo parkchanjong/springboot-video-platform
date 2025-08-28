@@ -12,4 +12,12 @@ public class Channel {
     private ChannelSnippet snippet;
     private ChannelStatistics statistics;
     private String contentOwnerId;
+
+    public void updateSnippet(String title, String description, String thumbnailUrl) {
+        this.snippet = ChannelSnippet.builder()
+                .title(title)
+                .description(description)
+                .thumbnailUrl(thumbnailUrl)
+                .build();
+    }
 }
