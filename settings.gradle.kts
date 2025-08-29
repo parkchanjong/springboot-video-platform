@@ -23,3 +23,5 @@ include("video-core:core-service")
 include("video-core:core-usecase")
 
 include("video-commons")
+
+include("testFixtures")
