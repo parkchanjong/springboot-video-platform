@@ -12,4 +12,8 @@ dependencies {
     runtimeOnly("com.mysql:mysql-connector-j")
 
     integrationImplementation("org.springframework.boot:spring-boot-starter-test")
+
+    testRuntimeOnly("com.h2database:h2")
+    testRuntimeOnly("de.flapdoodle.embed:de.flapdoodle.embed.mongo.spring3x:4.16.1")
+    testImplementation("com.github.codemonstur:embedded-redis:1.4.3")
 }

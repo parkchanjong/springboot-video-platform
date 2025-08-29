@@ -4,8 +4,6 @@ dependencies {
     implementation(project(":video-core:core-domain"))
     implementation(project(":video-commons"))
 
-    implementation(project(":testFixtures"))
-
     implementation("org.springframework.data:spring-data-commons")
     implementation("org.springframework:spring-context")
 
@@ -14,4 +12,5 @@ dependencies {
     implementation("io.jsonwebtoken:jjwt-jackson")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation(project(":testFixtures"))
 }
