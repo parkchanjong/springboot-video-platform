@@ -6,8 +6,8 @@ build/
 .idea
 .gradle/
 out/
-infra/db
-infra/redis/data
+infra/mysql/
+infra/mongodb/
 
 ### IntelliJ IDEA ###
 .idea/modules.xml

@@ -1,4 +1,6 @@
 dependencies {
+    implementation(project(":video-adapters"))
+    implementation(project(":video-core:core-service"))
     implementation(project(":video-core:core-usecase"))
     implementation(project(":video-core:core-domain"))
 

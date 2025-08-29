@@ -1,0 +1,6 @@
+
+spring:
+  config:
+    import:
+      - adapters.yaml
+  web.resources.add-mappings: false
