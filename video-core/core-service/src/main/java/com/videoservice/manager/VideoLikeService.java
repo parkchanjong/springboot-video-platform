@@ -1,7 +1,5 @@
-package com.videoservice.manager.user;
+package com.videoservice.manager;
 
-import com.videoservice.manager.VideoLikePort;
-import com.videoservice.manager.VideoLikeUseCase;
 import org.springframework.stereotype.Service;
 
 @Service

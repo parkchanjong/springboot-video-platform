@@ -1,17 +1,12 @@
-package com.videoservice.manager.user;
+package com.videoservice.manager;
 
-
-import com.videoservice.manager.CommentBlockPort;
-import com.videoservice.manager.CommentLikePort;
-import com.videoservice.manager.CommentPort;
-import com.videoservice.manager.CommentUseCase;
-import com.videoservice.manager.LoadUserPort;
 import com.videoservice.manager.command.CommentCommand;
 import com.videoservice.manager.comment.Comment;
 import com.videoservice.manager.comment.CommentResponse;
 import com.videoservice.manager.exception.BadRequestException;
 import com.videoservice.manager.exception.DomainNotFoundException;
 import com.videoservice.manager.exception.ForbiddenRequestException;
+import com.videoservice.manager.user.User;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;

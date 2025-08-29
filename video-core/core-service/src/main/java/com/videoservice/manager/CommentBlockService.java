@@ -1,7 +1,6 @@
-package com.videoservice.manager.user;
+package com.videoservice.manager;
 
-import com.videoservice.manager.CommentBlockPort;
-import com.videoservice.manager.CommentBlockUseCase;
+import com.videoservice.manager.user.User;
 import org.springframework.stereotype.Service;
 
 @Service

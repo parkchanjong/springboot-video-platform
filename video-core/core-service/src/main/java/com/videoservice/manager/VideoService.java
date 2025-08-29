@@ -1,12 +1,5 @@
-package com.videoservice.manager.user;
+package com.videoservice.manager;
 
-import com.videoservice.manager.LoadChannelPort;
-import com.videoservice.manager.LoadVideoPort;
-import com.videoservice.manager.MessagePort;
-import com.videoservice.manager.SaveChannelPort;
-import com.videoservice.manager.SaveVideoPort;
-import com.videoservice.manager.VideoLikePort;
-import com.videoservice.manager.VideoUseCase;
 import com.videoservice.manager.command.VideoCommand;
 import com.videoservice.manager.video.Video;
 import java.time.LocalDateTime;

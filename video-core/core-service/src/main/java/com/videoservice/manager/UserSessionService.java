@@ -1,7 +1,5 @@
-package com.videoservice.manager.user;
+package com.videoservice.manager;
 
-import com.videoservice.manager.UserSessionPort;
-import com.videoservice.manager.UserSessionUseCase;
 import org.springframework.stereotype.Service;
 
 @Service

@@ -1,9 +1,5 @@
-package com.videoservice.manager.user;
+package com.videoservice.manager;
 
-import com.videoservice.manager.LoadChannelPort;
-import com.videoservice.manager.LoadUserPort;
-import com.videoservice.manager.SubscribePort;
-import com.videoservice.manager.SubscribeUseCase;
 import com.videoservice.manager.channel.Channel;
 import java.util.List;
 import org.springframework.stereotype.Service;

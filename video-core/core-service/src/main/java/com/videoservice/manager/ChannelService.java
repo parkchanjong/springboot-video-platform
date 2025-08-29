@@ -1,8 +1,5 @@
-package com.videoservice.manager.user;
+package com.videoservice.manager;
 
-import com.videoservice.manager.ChannelUseCase;
-import com.videoservice.manager.LoadChannelPort;
-import com.videoservice.manager.SaveChannelPort;
 import com.videoservice.manager.channel.Channel;
 import com.videoservice.manager.channel.ChannelSnippet;
 import com.videoservice.manager.channel.ChannelStatistics;
