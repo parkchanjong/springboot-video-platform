@@ -65,7 +65,7 @@ class ChannelPersistenceAdapterTest {
             then(result)
                     .isPresent()
                     .hasValueSatisfying(channel -> {
-                        then(channel.getId()).isEqualTo("id");
+                        then(channel.getId()).isEqualTo("channel1");
                     });
         }
     }

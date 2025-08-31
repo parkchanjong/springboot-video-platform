@@ -6,19 +6,7 @@ dependencies {
     implementation(project(":video-core:core-domain"))
 
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-security")
-    implementation("org.springframework.boot:spring-boot-starter-aop")
-    implementation("org.springframework.boot:spring-boot-starter-validation")
-    implementation("org.springframework.boot:spring-boot-starter-actuator")
-    implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
-    implementation("org.springframework.security:spring-security-oauth2-client")
     implementation("org.springframework.data:spring-data-commons")
-
-    integrationImplementation("org.springframework.boot:spring-boot-starter-test")
-    integrationImplementation("org.springframework.restdocs:spring-restdocs-mockmvc")
-    integrationImplementation("io.rest-assured:spring-mock-mvc")
-
-    integrationImplementation("com.epages:restdocs-api-spec-mockmvc")
 
     testImplementation(project(":testFixtures"))
     implementation(project(":video-core:core-port"))
