@@ -8,7 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import com.videoservice.manager.domain.video.VideoFixtures;
-import com.videoservice.manager.fixtures.VideoJpaEntityFixtures;
+import com.videoservice.manager.jpa.VideoJpaEntityFixtures;
 import com.videoservice.manager.jpa.video.VideoJpaEntity;
 import com.videoservice.manager.jpa.video.VideoJpaRepository;
 import java.util.List;

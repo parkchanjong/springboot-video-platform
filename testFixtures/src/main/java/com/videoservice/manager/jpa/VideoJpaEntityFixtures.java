@@ -1,4 +1,4 @@
-package com.videoservice.manager.fixtures;
+package com.videoservice.manager.jpa;
 
 import com.videoservice.manager.jpa.video.VideoJpaEntity;
 import java.time.LocalDateTime;

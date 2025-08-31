@@ -7,7 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import com.videoservice.manager.domain.channel.ChannelFixtures;
-import com.videoservice.manager.fixtures.ChannelJpaEntityFixtures;
+import com.videoservice.manager.jpa.ChannelJpaEntityFixtures;
 import com.videoservice.manager.jpa.channel.ChannelJpaEntity;
 import com.videoservice.manager.jpa.channel.ChannelJpaRepository;
 import java.util.Optional;

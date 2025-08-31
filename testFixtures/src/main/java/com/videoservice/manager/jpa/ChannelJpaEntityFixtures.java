@@ -1,4 +1,4 @@
-package com.videoservice.manager.fixtures;
+package com.videoservice.manager.jpa;
 
 import com.videoservice.manager.jpa.channel.ChannelJpaEntity;
 import com.videoservice.manager.jpa.channel.ChannelSnippetJpaEntity;

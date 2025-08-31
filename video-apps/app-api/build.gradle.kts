@@ -19,6 +19,9 @@ dependencies {
 
     integrationImplementation("com.epages:restdocs-api-spec-mockmvc")
 
+    testImplementation(project(":testFixtures"))
+    implementation(project(":video-core:core-port"))
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
 
