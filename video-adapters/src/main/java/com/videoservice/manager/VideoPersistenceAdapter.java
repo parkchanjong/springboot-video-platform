@@ -82,7 +82,6 @@ public class VideoPersistenceAdapter implements LoadVideoPort, SaveVideoPort {
     public void syncViewCount(String videoId) {
         videoJpaRepository.findById(videoId)
                 .ifPresent(videoJpaEntity -> {
-                    var viewCount = redisTemplate.opsForValue().get(getVideoViewCountKey(videoId));
                     videoJpaEntity.updateViewCount(redisTemplate.opsForValue().get(
                             getVideoViewCountKey(videoId)));
                     videoJpaRepository.save(videoJpaEntity);
