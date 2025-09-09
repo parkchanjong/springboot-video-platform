@@ -6,11 +6,9 @@ import com.videoservice.manager.user.User;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.StreamSupport;
-import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 @Component
-@Primary
 public class UserPersistenceAdapter implements LoadUserPort {
     private final UserJpaRepository userJpaRepository;
 
