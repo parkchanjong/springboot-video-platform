@@ -14,11 +14,18 @@ services:
       - MYSQL_ROOT_PASSWORD=admin
       - MYSQL_ALLOW_EMPTY_PASSWORD=admin
       - MYSQL_RANDOM_ROOT_PASSWORD=admin
+    networks:
+      - video_service_network
   redis:
     image: redis:7.2.5
     container_name: video-service-redis
     ports:
       - '6379:6379'
+    volumes:
+      - ./redis-config:/usr/local/etc/redis
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - video_service_network
   mongodb:
     image: mongo:6.0.16
     container_name: video-service-mongodb
@@ -30,3 +37,26 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=local
       - MONGO_INITDB_ROOT_PASSWORD=local
       - MONGO_INITDB_DATABASE=video-service
+    networks:
+      - video_service_network
+
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    privileged: true
+    user: root
+    ports:
+      - "8888:8080"
+      - "50000:50000"
+    volumes:
+      - ./jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ../video-apps/app-batch/:/var/jenkins_home/workspace/app-batch
+    environment:
+      - TZ=Asia/Seoul
+    networks:
+      - promotion_network
+
+networks:
+  video_service_network:
+    driver: bridge
