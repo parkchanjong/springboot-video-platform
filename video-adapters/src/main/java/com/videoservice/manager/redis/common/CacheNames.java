@@ -1,4 +1,4 @@
-package com.videoservice.manager.common;
+package com.videoservice.manager.redis.common;
 
 
 import static java.lang.reflect.Modifier.isStatic;

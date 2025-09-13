@@ -1,4 +1,4 @@
-package com.videoservice.manager.config;
+package com.videoservice.manager.redis.config;
 
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Configuration;

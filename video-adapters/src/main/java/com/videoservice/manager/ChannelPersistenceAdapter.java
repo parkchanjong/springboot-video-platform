@@ -1,6 +1,6 @@
 package com.videoservice.manager;
 
-import static com.videoservice.manager.common.CacheNames.CHANNEL;
+import static com.videoservice.manager.redis.common.CacheNames.CHANNEL;
 
 import com.videoservice.manager.channel.Channel;
 import com.videoservice.manager.jpa.channel.ChannelJpaEntity;

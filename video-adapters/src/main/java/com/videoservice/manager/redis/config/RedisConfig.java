@@ -1,4 +1,4 @@
-package com.videoservice.manager.config;
+package com.videoservice.manager.redis.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;

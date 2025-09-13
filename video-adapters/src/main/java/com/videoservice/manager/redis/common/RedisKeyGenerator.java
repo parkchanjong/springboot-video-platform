@@ -1,6 +1,6 @@
-package com.videoservice.manager.common;
+package com.videoservice.manager.redis.common;
 
-import static com.videoservice.manager.common.CacheNames.*;
+import static com.videoservice.manager.redis.common.CacheNames.*;
 
 public class RedisKeyGenerator {
     public static String getUserSessionKey(String authKey) {

@@ -8,6 +8,8 @@ build/
 out/
 infra/mysql/
 infra/mongodb/
+infra/data/
+infra/jenkins_home/
 
 ### IntelliJ IDEA ###
 .idea/modules.xml

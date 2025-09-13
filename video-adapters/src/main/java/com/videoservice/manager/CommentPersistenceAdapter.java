@@ -1,7 +1,7 @@
 package com.videoservice.manager;
 
 import com.videoservice.manager.comment.Comment;
-import com.videoservice.manager.common.RedisKeyGenerator;
+import com.videoservice.manager.redis.common.RedisKeyGenerator;
 import com.videoservice.manager.mongo.comment.CommentDocument;
 import com.videoservice.manager.mongo.comment.CommentMongoRepository;
 import java.time.LocalDateTime;

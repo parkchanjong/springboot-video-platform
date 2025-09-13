@@ -1,8 +1,8 @@
 package com.videoservice.manager;
 
-import static com.videoservice.manager.common.CacheNames.SUBSCRIBE_CHANNEL_BY_USER;
-import static com.videoservice.manager.common.RedisKeyGenerator.getSubscribeChannelKey;
-import static com.videoservice.manager.common.RedisKeyGenerator.getSubscribeUserKey;
+import static com.videoservice.manager.redis.common.CacheNames.SUBSCRIBE_CHANNEL_BY_USER;
+import static com.videoservice.manager.redis.common.RedisKeyGenerator.getSubscribeChannelKey;
+import static com.videoservice.manager.redis.common.RedisKeyGenerator.getSubscribeUserKey;
 
 import com.videoservice.manager.channel.Channel;
 import com.videoservice.manager.jpa.channel.ChannelJpaEntity;

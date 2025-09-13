@@ -1,11 +1,11 @@
 package com.videoservice.manager;
 
 
-import static com.videoservice.manager.common.CacheNames.VIDEO;
-import static com.videoservice.manager.common.CacheNames.VIDEO_LIST;
-import static com.videoservice.manager.common.RedisKeyGenerator.getVideoViewCountKey;
+import static com.videoservice.manager.redis.common.CacheNames.VIDEO;
+import static com.videoservice.manager.redis.common.CacheNames.VIDEO_LIST;
+import static com.videoservice.manager.redis.common.RedisKeyGenerator.getVideoViewCountKey;
 
-import com.videoservice.manager.common.RedisKeyGenerator;
+import com.videoservice.manager.redis.common.RedisKeyGenerator;
 import com.videoservice.manager.jpa.video.VideoJpaEntity;
 import com.videoservice.manager.jpa.video.VideoJpaRepository;
 import com.videoservice.manager.video.Video;
