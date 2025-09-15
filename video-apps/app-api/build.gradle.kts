@@ -4,6 +4,7 @@ dependencies {
     implementation(project(":video-core:core-service"))
     implementation(project(":video-core:core-usecase"))
     implementation(project(":video-core:core-domain"))
+    implementation(project(":support:monitoring"))
 
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.data:spring-data-commons")
