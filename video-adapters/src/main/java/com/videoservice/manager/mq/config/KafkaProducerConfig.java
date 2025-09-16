@@ -1,5 +1,6 @@
 package com.videoservice.manager.mq.config;
 
+import com.videoservice.manager.mq.dto.NewVideoMessage;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -17,7 +18,7 @@ public class KafkaProducerConfig {
     private static final String BOOTSTRAP_SERVERS = "localhost:9092";
 
     @Bean
-    public ProducerFactory<String, Object> producerFactory() {
+    public ProducerFactory<String, NewVideoMessage> producerFactory() {
         Map<String, Object> config = new HashMap<>();
         config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
         config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
@@ -26,7 +27,7 @@ public class KafkaProducerConfig {
     }
 
     @Bean
-    public KafkaTemplate<String, Object> kafkaTemplate() {
+    public KafkaTemplate<String, NewVideoMessage> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
     }
 }
