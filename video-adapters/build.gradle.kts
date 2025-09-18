@@ -10,6 +10,9 @@ dependencies {
     implementation("org.springframework:spring-tx")
     implementation("org.springframework.boot:spring-boot-starter-web")
 
+    implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j")
+    implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
+
     runtimeOnly("com.mysql:mysql-connector-j")
 
     testImplementation(project(":testFixtures"))
