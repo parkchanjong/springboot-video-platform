@@ -12,6 +12,7 @@ dependencies {
 
     implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j")
     implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
+    implementation("org.redisson:redisson-spring-boot-starter:3.23.5")
 
     runtimeOnly("com.mysql:mysql-connector-j")
 
