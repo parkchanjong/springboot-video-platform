@@ -7,7 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-@Entity(name = "coupon")
+@Entity(name = "coupon_policy")
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
