@@ -1,7 +1,8 @@
 package com.videoservice.manager;
 
-public interface CouponUserCase {
+import com.videoservice.manager.user.User;
 
-    void issueCoupon();
-    void useCoupon();
+public interface CouponUseCase {
+
+    void issueCoupon(User user, String couponPolicyId);
 }
