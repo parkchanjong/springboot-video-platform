@@ -2,6 +2,7 @@ package com.videoservice.manager;
 
 import com.videoservice.manager.command.CouponPolicyCommand;
 import com.videoservice.manager.coupon.CouponPolicy;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 
@@ -29,7 +30,7 @@ public class CouponPolicyService implements CouponPolicyUseCase {
     }
 
     @Override
-    public CouponPolicy loadCouponPolicy(String couponPolicyId) {
+    public Optional<CouponPolicy> loadCouponPolicy(String couponPolicyId) {
         return loadCouponPolicyPort.loadCouponPolicy(couponPolicyId);
     }
 }

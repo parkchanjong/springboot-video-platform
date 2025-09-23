@@ -39,4 +39,11 @@ public class RedisKeyGenerator {
         return COMMENT_PINNED + SEPARATOR + videoId;
     }
 
+    public static String getQuantityKeyKey(String couponPolicyId) {
+        return COUPON_QUANTITY + SEPARATOR + couponPolicyId;
+    }
+
+    public static String getPolicyKeyKey(String couponPolicyId) {
+        return COUPON_POLICY + SEPARATOR + couponPolicyId;
+    }
 }

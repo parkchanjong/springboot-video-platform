@@ -19,7 +19,7 @@ public class CouponService implements CouponUseCase {
 
     @Override
     public void issueCoupon(User user, String couponPolicyId) {
-        var couponPolicy = loadCouponPolicyPort.loadCouponPolicy(couponPolicyId);
+        var couponPolicy = loadCouponPolicyPort.loadCouponPolicy(couponPolicyId).get();
 
         LocalDateTime now = LocalDateTime.now();
         if (now.isBefore(couponPolicy.getStartTime()) || now.isAfter(couponPolicy.getEndTime())) {

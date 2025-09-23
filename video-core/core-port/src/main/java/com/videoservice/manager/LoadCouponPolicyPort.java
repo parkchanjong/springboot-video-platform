@@ -1,9 +1,10 @@
 package com.videoservice.manager;
 
 import com.videoservice.manager.coupon.CouponPolicy;
+import java.util.Optional;
 
 public interface LoadCouponPolicyPort {
 
-    CouponPolicy loadCouponPolicy(String couponPolicyId);
+    Optional<CouponPolicy> loadCouponPolicy(String couponPolicyId);
     long countByCouponPolicyId(String couponPolicyId);
 }
