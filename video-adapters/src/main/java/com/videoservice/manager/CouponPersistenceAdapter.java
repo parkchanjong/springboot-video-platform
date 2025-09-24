@@ -17,7 +17,9 @@ public class CouponPersistenceAdapter implements CouponPort {
     private final ObjectMapper objectMapper;
     private final CouponJpaRepository couponJpaRepository;
 
-    public CouponPersistenceAdapter(RedissonClient redissonClient, ObjectMapper objectMapper, CouponJpaRepository couponJpaRepository) {
+    public CouponPersistenceAdapter(
+            RedissonClient redissonClient, ObjectMapper objectMapper, CouponJpaRepository couponJpaRepository
+    ) {
         this.redissonClient = redissonClient;
         this.objectMapper = objectMapper;
         this.couponJpaRepository = couponJpaRepository;

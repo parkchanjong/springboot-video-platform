@@ -50,4 +50,8 @@ public class RedisKeyGenerator {
     public static String getCouponStateKey(String couponId) {
         return COUPON_STATE + SEPARATOR + couponId;
     }
+
+    public static String buildLockKey(String couponPolicyId) {
+        return COUPON_LOCK_PREFIX + SEPARATOR + couponPolicyId;
+    }
 }

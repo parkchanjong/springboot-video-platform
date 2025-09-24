@@ -6,5 +6,4 @@ import java.util.Optional;
 public interface LoadCouponPolicyPort {
 
     Optional<CouponPolicy> loadCouponPolicy(String couponPolicyId);
-    long countByCouponPolicyId(String couponPolicyId);
 }

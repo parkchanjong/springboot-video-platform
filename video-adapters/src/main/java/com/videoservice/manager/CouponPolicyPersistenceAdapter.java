@@ -15,7 +15,8 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-public class CouponPolicyPersistenceAdapter implements LoadCouponPolicyPort, SaveCouponPolicyPort {
+public class CouponPolicyPersistenceAdapter implements LoadCouponPolicyPort, SaveCouponPolicyPort,
+        CouponQuantityPort {
 
     private final CouponPolicyJpaRepository couponPolicyJpaRepository;
     private final RedissonClient redissonClient;
@@ -64,8 +65,16 @@ public class CouponPolicyPersistenceAdapter implements LoadCouponPolicyPort, Sav
     }
 
     @Override
-    public long countByCouponPolicyId(String couponPolicyId) {
-        var atomicQuantity = redissonClient.getAtomicLong(RedisKeyGenerator.getCouponPolicyKeyKey(couponPolicyId));
+    public long decrementQuantity(String couponPolicyId) {
+        var atomicQuantity = redissonClient.getAtomicLong(
+                RedisKeyGenerator.getCouponQuantityKeyKey(couponPolicyId));
         return atomicQuantity.decrementAndGet();
+    }
+
+    @Override
+    public void incrementQuantity(String couponPolicyId) {
+        var atomicQuantity = redissonClient.getAtomicLong(
+                RedisKeyGenerator.getCouponQuantityKeyKey(couponPolicyId));
+        atomicQuantity.incrementAndGet();
     }
 }
