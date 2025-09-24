@@ -26,7 +26,6 @@ class CouponPolicyServiceTest {
         sut = new CouponPolicyService(loadCouponPolicyPort, saveCouponPolicyPort);
     }
 
-
     @Test
     @DisplayName("createCouponPolicy")
     void testCreateCouponPolicy() {
