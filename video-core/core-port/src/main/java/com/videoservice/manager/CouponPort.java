@@ -6,7 +6,7 @@ public interface CouponPort {
 
     void saveCoupon(Coupon coupon);
 
-//    void updateCouponState(Coupon coupon);
-//
-//    Coupon getCouponState(String couponId);
+    void updateCouponState(Coupon coupon);
+
+    Coupon getCouponState(String couponId);
 }

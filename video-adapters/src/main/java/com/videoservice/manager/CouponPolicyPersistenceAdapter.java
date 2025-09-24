@@ -33,7 +33,7 @@ public class CouponPolicyPersistenceAdapter implements LoadCouponPolicyPort, Sav
 
         var savedPolicy = couponPolicyJpaRepository.save(CouponPolicyJpaEntity.from(couponPolicy));
 
-        var atomicQuantity = redissonClient.getAtomicLong(RedisKeyGenerator.getQuantityKeyKey(savedPolicy.getId()));
+        var atomicQuantity = redissonClient.getAtomicLong(RedisKeyGenerator.getCouponQuantityKeyKey(savedPolicy.getId()));
         atomicQuantity.set(savedPolicy.getTotalQuantity());
 
         String policyJson;
@@ -42,20 +42,20 @@ public class CouponPolicyPersistenceAdapter implements LoadCouponPolicyPort, Sav
         } catch (JsonProcessingException e) {
             throw new CouponIssueException("JsonProcessingException.");
         }
-        var bucket = redissonClient.getBucket(RedisKeyGenerator.getPolicyKeyKey(savedPolicy.getId()));
+        var bucket = redissonClient.getBucket(RedisKeyGenerator.getCouponPolicyKeyKey(savedPolicy.getId()));
         bucket.set(policyJson);
     }
 
     @Override
     public Optional<CouponPolicy> loadCouponPolicy(String couponPolicyId) {
 
-        RBucket<String> bucket = redissonClient.getBucket(RedisKeyGenerator.getPolicyKeyKey(couponPolicyId));
+        RBucket<String> bucket = redissonClient.getBucket(RedisKeyGenerator.getCouponPolicyKeyKey(couponPolicyId));
         String policyJson = bucket.get();
         if (policyJson != null) {
             try {
                 return Optional.ofNullable(objectMapper.readValue(policyJson, CouponPolicy.class));
             } catch (JsonProcessingException e) {
-                log.error("쿠폰 정책 정보를 JSON으로 파싱하는 중 오류가 발생했습니다.", e);
+                throw new CouponIssueException("쿠폰 정책 정보를 JSON으로 파싱하는 중 오류가 발생했습니다.");
             }
         }
 
@@ -65,8 +65,7 @@ public class CouponPolicyPersistenceAdapter implements LoadCouponPolicyPort, Sav
 
     @Override
     public long countByCouponPolicyId(String couponPolicyId) {
-        var atomicQuantity = redissonClient.getAtomicLong(RedisKeyGenerator.getPolicyKeyKey(couponPolicyId));
+        var atomicQuantity = redissonClient.getAtomicLong(RedisKeyGenerator.getCouponPolicyKeyKey(couponPolicyId));
         return atomicQuantity.decrementAndGet();
     }
-
 }

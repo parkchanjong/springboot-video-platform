@@ -28,6 +28,8 @@ public class CacheNames {
     public static final String COUPON = "coupon";
     public static final String QUANTITY = "quantity";
     public static final String POLICY = "policy";
+    public static final String STATE = "state";
     public static final String COUPON_QUANTITY = COUPON + SEPARATOR + QUANTITY;
     public static final String COUPON_POLICY = COUPON + SEPARATOR + POLICY;
+    public static final String COUPON_STATE = COUPON + SEPARATOR + STATE;
 }
