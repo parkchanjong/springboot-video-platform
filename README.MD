@@ -1,7 +1,50 @@
 # springboot-video-platform
 
+## 기능 요구사항
 
----
+- 비디오 조회
+- 비디오 좋아요
+- 채널 구독
+- 새로운 비디오 알림 전송
+- 댓글 작성
+- 댓글 차단
+- 책 검색
+- 쿠폰 발급
+
+## 개발 스택
+
+- Java
+- Spring Boot
+- Gradle
+- JPA
+- QueryDSL
+- mongodb
+- redis
+- kafka
+
+## 프로젝트 모듈 구조
+
+헥사고날 아키텍쳐로 구성하기 위해 프로젝트를 멀티 모듈로 구성합니다.
+
+주요 모듈:
+
+- `video-core`: 비즈니스 로직과 도메인 모델을 관리하는 기본 모듈
+- `video-apps`: 클라이언트가 호출할 수 있는 REST API 와 배치잡을 모아둔 모듈
+- `video-adapters`: 외부 인프라와 통신하기 위한 모듈
+- `video-commons`: 공통으로 사용되는 유틸리티를 모아둔 모듈
+
+## 외부 라이브러리 목록
+
+| Dependency                                          | Version | Purpose                                                            |
+| ---------------------------------------------------- | ------- | ------------------------------------------------------------------ |
+| spring-cloud-starter-circuitbreaker-resilience4j     | 2.0.2   | 서킷브레이커 기능을 제공하는 라이브러리                                |
+| it.ozimov:embedded-redis                            | 0.7.2   | 테스트용 내장 Redis 인스턴스를 제공하는 라이브러리                         |
+| com.querydsl:querydsl-jpa                            | 5.0.0   | JPA를 사용하여 타입 안전한 쿼리를 작성할 수 있게 도와주는 라이브러리    |
+| com.querydsl:querydsl-apt                            | 5.0.0   | Querydsl을 사용하기 위한 애노테이션 프로세서 라이브러리                 |
+
+| Test Dependency                                     | Version | Purpose                                        |
+| ---------------------------------------------------- | ------- | ---------------------------------------------- |
+
 
 ## Rules
 
@@ -18,4 +61,5 @@
 | `chore`    | 빌드 부분 혹은 패키지 매니저 수정 사항 / 파일 이름 변경 및 위치 변경 / 파일 삭제      |
 | `docs`     | 문서 추가 및 수정                                             |
 | `rename`   | 패키지 혹은 폴더명, 클래스명 수정 (단독으로 시행하였을 시)                     |
-| `remove`   | 패키지 혹은 폴더, 클래스를 삭제하였을 때 (단독으로 시행하였을 시)                 |# Subscription-memberships-Spring-Security
+| `remove`   | 패키지 혹은 폴더, 클래스를 삭제하였을 때 (단독으로 시행하였을 시)                 |
+
