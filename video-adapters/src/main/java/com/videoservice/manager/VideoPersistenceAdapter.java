@@ -5,6 +5,7 @@ import static com.videoservice.manager.redis.common.CacheNames.VIDEO;
 import static com.videoservice.manager.redis.common.CacheNames.VIDEO_LIST;
 import static com.videoservice.manager.redis.common.RedisKeyGenerator.getVideoViewCountKey;
 
+import com.videoservice.manager.jpa.video.VideoCustomRepository;
 import com.videoservice.manager.redis.common.RedisKeyGenerator;
 import com.videoservice.manager.jpa.video.VideoJpaEntity;
 import com.videoservice.manager.jpa.video.VideoJpaRepository;
@@ -21,11 +22,18 @@ import org.springframework.stereotype.Component;
 @Component
 public class VideoPersistenceAdapter implements LoadVideoPort, SaveVideoPort {
     private final VideoJpaRepository videoJpaRepository;
+    private final VideoCustomRepository videoCustomRepository;
     private final RedisTemplate<String, Long> redisTemplate;
     private final StringRedisTemplate stringRedisTemplate;
 
-    public VideoPersistenceAdapter(VideoJpaRepository videoJpaRepository, RedisTemplate<String, Long> redisTemplate, StringRedisTemplate stringRedisTemplate) {
+    public VideoPersistenceAdapter(
+            VideoJpaRepository videoJpaRepository,
+            VideoCustomRepository videoCustomRepository,
+            RedisTemplate<String, Long> redisTemplate,
+            StringRedisTemplate stringRedisTemplate
+    ) {
         this.videoJpaRepository = videoJpaRepository;
+        this.videoCustomRepository = videoCustomRepository;
         this.redisTemplate = redisTemplate;
         this.stringRedisTemplate = stringRedisTemplate;
     }
@@ -41,7 +49,7 @@ public class VideoPersistenceAdapter implements LoadVideoPort, SaveVideoPort {
     @Override
     @Cacheable(cacheNames = VIDEO_LIST, key = "#channelId")
     public List<Video> loadVideoByChannel(String channelId) {
-        return videoJpaRepository.findByChannelId(channelId).stream()
+        return videoCustomRepository.findByChannelId(channelId).stream()
                 .map(VideoJpaEntity::toDomain)
                 .toList();
     }

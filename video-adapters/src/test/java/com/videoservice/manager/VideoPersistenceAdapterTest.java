@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 
 import com.videoservice.manager.domain.video.VideoFixtures;
 import com.videoservice.manager.jpa.VideoJpaEntityFixtures;
+import com.videoservice.manager.jpa.video.VideoCustomRepository;
 import com.videoservice.manager.jpa.video.VideoJpaEntity;
 import com.videoservice.manager.jpa.video.VideoJpaRepository;
 import java.util.List;
@@ -32,6 +33,7 @@ class VideoPersistenceAdapterTest {
     private VideoPersistenceAdapter sut;
 
     private final VideoJpaRepository videoJpaRepository = mock(VideoJpaRepository.class);
+    private final VideoCustomRepository videoCustomRepository = mock(VideoCustomRepository.class);
     private final RedisTemplate<String, Long> redisTemplate = mock(RedisTemplate.class, Mockito.RETURNS_DEEP_STUBS);
     private final StringRedisTemplate stringRedisTemplate = mock(StringRedisTemplate.class, Mockito.RETURNS_DEEP_STUBS);
     private final ValueOperations<String, Long> valueOperations = mock(ValueOperations.class);
@@ -39,7 +41,7 @@ class VideoPersistenceAdapterTest {
 
     @BeforeEach
     void setUp() {
-        sut = new VideoPersistenceAdapter(videoJpaRepository, redisTemplate, stringRedisTemplate);
+        sut = new VideoPersistenceAdapter(videoJpaRepository, videoCustomRepository, redisTemplate, stringRedisTemplate);
         given(redisTemplate.opsForValue()).willReturn(valueOperations);
     }
 
@@ -80,7 +82,7 @@ class VideoPersistenceAdapterTest {
         // Given
         var videoJpaEntity1 = VideoJpaEntityFixtures.stub("video1");
         var videoJpaEntity2 = VideoJpaEntityFixtures.stub("video2");
-        given(videoJpaRepository.findByChannelId(any()))
+        given(videoCustomRepository.findByChannelId(any()))
                 .willReturn(List.of(videoJpaEntity1, videoJpaEntity2));
 
         // When
