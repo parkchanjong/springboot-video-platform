@@ -28,7 +28,7 @@ public class ChannelApiController {
         return new CommandResponse(channel.getId());
     }
 
-    @PutMapping("{channelId}")
+    @PutMapping("/{channelId}")
     public void updateChannel(
             @PathVariable String channelId,
             @RequestBody ChannelRequest channelRequest
@@ -36,7 +36,7 @@ public class ChannelApiController {
         channelUseCase.updateChannel(channelId, channelRequest.toCommand());
     }
 
-    @GetMapping("{channelId}")
+    @GetMapping("/{channelId}")
     public Channel getChannel(@PathVariable String channelId) {
         return channelUseCase.getChannel(channelId);
     }

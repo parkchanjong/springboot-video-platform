@@ -2,6 +2,7 @@ package com.videoservice.manager;
 
 import com.videoservice.manager.command.CouponPolicyCommand;
 import com.videoservice.manager.coupon.CouponPolicy;
+import com.videoservice.manager.exception.DomainNotFoundException;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -30,7 +31,8 @@ public class CouponPolicyService implements CouponPolicyUseCase {
     }
 
     @Override
-    public Optional<CouponPolicy> loadCouponPolicy(String couponPolicyId) {
-        return loadCouponPolicyPort.loadCouponPolicy(couponPolicyId);
+    public CouponPolicy loadCouponPolicy(String couponPolicyId) {
+        return loadCouponPolicyPort.loadCouponPolicy(couponPolicyId)
+                .orElseThrow(() -> new DomainNotFoundException("CouponPolicy Not Found."));
     }
 }

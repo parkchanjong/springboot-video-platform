@@ -67,7 +67,7 @@ class CouponPolicyServiceTest {
         var result = sut.loadCouponPolicy(couponPolicyId);
 
         // Then
-        then(result).contains(couponPolicy);
+        then(result).isEqualTo(couponPolicy);
         verify(loadCouponPolicyPort).loadCouponPolicy(couponPolicyId);
     }
 }

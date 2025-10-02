@@ -22,7 +22,7 @@ public class VideoApiController {
         this.videoUseCase = videoUseCase;
     }
 
-    @GetMapping("{videoId}")
+    @GetMapping("/{videoId}")
     public Video getVideo(@PathVariable String videoId) {
         return videoUseCase.getVideo(videoId);
     }
@@ -38,7 +38,7 @@ public class VideoApiController {
         return new CommandResponse(video.getId());
     }
 
-    @PostMapping("{videoId}/view")
+    @PostMapping("/{videoId}/view")
     public void increaseVideoViewCount(@PathVariable String videoId) {
         videoUseCase.increaseViewCount(videoId);
     }

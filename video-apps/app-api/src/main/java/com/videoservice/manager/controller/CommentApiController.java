@@ -34,7 +34,7 @@ public class CommentApiController {
         return new CommandResponse(comment.getId());
     }
 
-    @PutMapping("{commentId}")
+    @PutMapping("/{commentId}")
     CommandResponse updateComment(
             User user,
             @PathVariable String commentId,
@@ -44,7 +44,7 @@ public class CommentApiController {
         return new CommandResponse(updateComment.getId());
     }
 
-    @DeleteMapping("{commentId}")
+    @DeleteMapping("/{commentId}")
     void deleteComment(
             User user,
             @PathVariable String commentId
