@@ -1,0 +1,77 @@
+= Video Information Manager API
+:toc: left
+:toclevels: 2
+:sectnums:
+:snippets: ../../build/generated-snippets
+
+== Coupon
+
+=== Issue Coupon
+include::{snippets}/coupons-issue/http-request.adoc[]
+include::{snippets}/coupons-issue/request-parameters.adoc[]
+include::{snippets}/coupons-issue/request-headers.adoc[]
+include::{snippets}/coupons-issue/http-response.adoc[]
+
+=== Coupon Policy
+==== Create Coupon Policy
+include::{snippets}/coupon-policies-create/http-request.adoc[]
+include::{snippets}/coupon-policies-create/request-fields.adoc[]
+include::{snippets}/coupon-policies-create/http-response.adoc[]
+
+==== Get Coupon Policy
+include::{snippets}/coupon-policies-get/http-request.adoc[]
+include::{snippets}/coupon-policies-get/path-parameters.adoc[]
+include::{snippets}/coupon-policies-get/http-response.adoc[]
+include::{snippets}/coupon-policies-get/response-fields.adoc[]
+
+== Comments
+
+=== Block Comment
+include::{snippets}/comments-block/http-request.adoc[]
+include::{snippets}/comments-block/request-headers.adoc[]
+include::{snippets}/comments-block/request-parameters.adoc[]
+include::{snippets}/comments-block/http-response.adoc[]
+
+== Videos
+
+=== Create Video
+include::{snippets}/videos-create/http-request.adoc[]
+include::{snippets}/videos-create/request-fields.adoc[]
+include::{snippets}/videos-create/http-response.adoc[]
+
+=== Get Video
+include::{snippets}/videos-get/http-request.adoc[]
+include::{snippets}/videos-get/path-parameters.adoc[]
+include::{snippets}/videos-get/http-response.adoc[]
+include::{snippets}/videos-get/response-fields.adoc[]
+
+=== List Videos
+include::{snippets}/videos-list/http-request.adoc[]
+include::{snippets}/videos-list/request-parameters.adoc[]
+include::{snippets}/videos-list/http-response.adoc[]
+include::{snippets}/videos-list/response-fields.adoc[]
+
+=== Increase Video View Count
+include::{snippets}/videos-view-increase/http-request.adoc[]
+include::{snippets}/videos-view-increase/path-parameters.adoc[]
+include::{snippets}/videos-view-increase/http-response.adoc[]
+
+=== Rate Video
+==== Like Video
+include::{snippets}/videos-rate-like/http-request.adoc[]
+include::{snippets}/videos-rate-like/request-parameters.adoc[]
+include::{snippets}/videos-rate-like/request-headers.adoc[]
+include::{snippets}/videos-rate-like/http-response.adoc[]
+
+==== Unlike Video
+include::{snippets}/videos-rate-none/http-request.adoc[]
+include::{snippets}/videos-rate-none/request-parameters.adoc[]
+include::{snippets}/videos-rate-none/request-headers.adoc[]
+include::{snippets}/videos-rate-none/http-response.adoc[]
+
+==== Get Video Rate
+include::{snippets}/videos-rate-get/http-request.adoc[]
+include::{snippets}/videos-rate-get/request-parameters.adoc[]
+include::{snippets}/videos-rate-get/request-headers.adoc[]
+include::{snippets}/videos-rate-get/http-response.adoc[]
+include::{snippets}/videos-rate-get/response-fields.adoc[]
