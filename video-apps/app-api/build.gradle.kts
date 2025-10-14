@@ -6,6 +6,7 @@ dependencies {
     implementation(project(":video-core:core-port"))
     implementation(project(":video-core:core-domain"))
     implementation(project(":support:monitoring"))
+    implementation(project(":support:logging"))
 
     implementation("org.springframework.boot:spring-boot-starter-web")
 

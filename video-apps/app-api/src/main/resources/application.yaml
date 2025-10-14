@@ -6,4 +6,5 @@ spring:
     import:
       - adapters.yaml
       - monitoring.yml
+      - logging.yml
   web.resources.add-mappings: false
