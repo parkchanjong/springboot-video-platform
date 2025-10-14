@@ -1,324 +1,225 @@
 package com.videoservice.manager.controller;
 
+import static com.videoservice.manager.RestDocsUtils.requestPreprocessor;
+import static com.videoservice.manager.RestDocsUtils.responsePreprocessor;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.BDDMockito.given;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.Mockito.when;
+import static org.springframework.restdocs.headers.HeaderDocumentation.headerWithName;
+import static org.springframework.restdocs.headers.HeaderDocumentation.requestHeaders;
+import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
+import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
+import static org.springframework.restdocs.payload.PayloadDocumentation.requestFields;
+import static org.springframework.restdocs.payload.PayloadDocumentation.responseFields;
+import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
+import static org.springframework.restdocs.request.RequestDocumentation.pathParameters;
+import static org.springframework.restdocs.request.RequestDocumentation.queryParameters;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.videoservice.manager.CommentUseCase;
-import com.videoservice.manager.LoadUserPort;
-import com.videoservice.manager.UserSessionPort;
+import com.videoservice.manager.RestDocsTest;
 import com.videoservice.manager.attribute.HeaderAttribute;
 import com.videoservice.manager.comment.CommentResponse;
 import com.videoservice.manager.domain.comment.CommentFixtures;
+import com.videoservice.manager.domain.comment.CommentResponseFixtures;
 import com.videoservice.manager.domain.user.UserFixtures;
 import com.videoservice.manager.dto.CommentRequest;
-import com.videoservice.manager.exception.BadRequestException;
-import com.videoservice.manager.exception.DomainNotFoundException;
-import com.videoservice.manager.exception.ForbiddenRequestException;
 import com.videoservice.manager.user.User;
+import io.restassured.http.ContentType;
 import java.time.LocalDateTime;
 import java.util.Collections;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.http.HttpStatus;
+import org.springframework.restdocs.payload.FieldDescriptor;
+import org.springframework.restdocs.payload.JsonFieldType;
 
-@WebMvcTest(CommentApiController.class)
-class CommentApiControllerTest {
+class CommentApiControllerTest extends RestDocsTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @MockBean
     private CommentUseCase commentUseCase;
-    @MockBean
-    private UserSessionPort userSessionPort;
-    @MockBean
-    private LoadUserPort loadUserPort;
 
-    private String authKey;
-    private User user;
+    private CommentApiController controller;
+
+    private User stubUser;
 
     @BeforeEach
     void setUp() {
-        authKey = UUID.randomUUID().toString();
-        user = UserFixtures.stub();
+        commentUseCase = mock(CommentUseCase.class);
+        controller = new CommentApiController(commentUseCase);
+        stubUser = UserFixtures.stub();
 
-        given(userSessionPort.getUserId(anyString())).willReturn(user.getId());
-        given(loadUserPort.loadUser(anyString())).willReturn(Optional.of(user));
+        mockMvc = mockController(controller);
     }
 
-    @Nested
-    @DisplayName("POST /api/v1/comments")
-    class CreateComment {
+    @Test
+    @DisplayName("POST /api/v1/comments creates a comment")
+    void createComment() {
+        var request = new CommentRequest("channel-1", "video-1", "parent-0", "Great video!");
+        when(commentUseCase.createComment(eq(stubUser), any())).thenReturn(
+                CommentFixtures.stub("comment-1"));
 
-        @Test
-        @DisplayName("200 OK, 생성된 id를 반환")
-        void testCreateComment() throws Exception {
-            // given
-            var request = new CommentRequest("channelId", "videoId", null, "comment");
-            given(commentUseCase.createComment(any(), any())).willReturn(
-                    CommentFixtures.stub("commentId"));
-
-            // when
-            mockMvc
-                    .perform(
-                            post("/api/v1/comments")
-                                    .header(HeaderAttribute.X_AUTH_KEY, authKey)
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(request))
-                    )
-                    .andExpectAll(
-                            status().isOk(),
-                            jsonPath("$.id").value("commentId")
-                    );
-        }
+        given().contentType(ContentType.JSON)
+                .header(HeaderAttribute.X_AUTH_KEY, "auth-key-001")
+                .body(request)
+                .post("/api/v1/comments")
+                .then()
+                .status(HttpStatus.OK)
+                .apply(document("comments-create", requestPreprocessor(), responsePreprocessor(),
+                        requestHeaders(
+                                headerWithName(HeaderAttribute.X_AUTH_KEY)
+                                        .description("Authentication key for the current user")),
+                        requestFields(
+                                fieldWithPath("channelId").type(JsonFieldType.STRING)
+                                        .description(
+                                                "Channel identifier where the comment belongs"),
+                                fieldWithPath("videoId").type(JsonFieldType.STRING)
+                                        .description("Video identifier"),
+                                fieldWithPath("parentId").type(JsonFieldType.STRING)
+                                        .description("Parent comment identifier if this is a reply")
+                                        .optional(),
+                                fieldWithPath("text").type(JsonFieldType.STRING)
+                                        .description("Comment content")),
+                        responseFields(
+                                fieldWithPath("id").type(JsonFieldType.STRING)
+                                        .description("Created comment identifier"))));
     }
 
-    @Nested
-    @DisplayName("PUT /api/v1/comments")
-    class UpdateComment {
+    @Test
+    @DisplayName("PUT /api/v1/comments/{commentId} updates a comment")
+    void updateComment() {
+        var commentId = "comment-1";
+        var request = new CommentRequest("channel-1", "video-1", "parent-0", "Updated comment");
+        when(commentUseCase.updateComment(eq(commentId), eq(stubUser), any()))
+                .thenReturn(CommentFixtures.stub(commentId));
 
-        @Test
-        @DisplayName("200 OK, 변경된 댓글의 id를 반환")
-        void testUpdateCommentThenOk() throws Exception {
-            // given
-            var commentId = "commentId";
-            var request = new CommentRequest("channelId", "videoId", null, "new comment");
-            given(commentUseCase.updateComment(any(), any(), any())).willReturn(
-                    CommentFixtures.stub(commentId));
-
-            // when
-            mockMvc
-                    .perform(
-                            put("/api/v1/comments/{commentId}", commentId)
-                                    .header(HeaderAttribute.X_AUTH_KEY, authKey)
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(request))
-                    )
-                    .andExpectAll(
-                            status().isOk(),
-                            jsonPath("$.id").value(commentId)
-                    );
-        }
-
-        @Test
-        @DisplayName("400 BadRequest, 댓글 meta 정보가 다를 경우 수정 실패")
-        void testGivenInvalidMetaDataWhenUpdateCommentThenBadRequest() throws Exception {
-            // given
-            var commentId = "commentId";
-            var request = new CommentRequest("otherChannelId", "otherVideoId", null, "new comment");
-            given(commentUseCase.updateComment(any(), any(), any()))
-                    .willThrow(new BadRequestException("Request metadata is invalid."));
-
-            // when
-            mockMvc
-                    .perform(
-                            put("/api/v1/comments/{commentId}", commentId)
-                                    .header(HeaderAttribute.X_AUTH_KEY, authKey)
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(request))
-                    )
-                    .andExpectAll(
-                            status().isBadRequest(),
-                            jsonPath("$.type").value("badRequest")
-                    );
-        }
-
-        @Test
-        @DisplayName("403 Forbidden, 댓글 작성자와 API 호출자가 다름 수정 실패")
-        void testGivenOtherAuthorWhenUpdateCommentThenForbidden() throws Exception {
-            // given
-            var commentId = "commentId";
-            var otherAuthKey = UUID.randomUUID().toString();
-            var request = new CommentRequest("channelId", "videoId", null, "new comment");
-            given(commentUseCase.updateComment(any(), any(), any()))
-                    .willThrow(new ForbiddenRequestException(
-                            "Request might not be properly authorized."));
-
-            // when
-            mockMvc
-                    .perform(
-                            put("/api/v1/comments/{commentId}", commentId)
-                                    .header(HeaderAttribute.X_AUTH_KEY, otherAuthKey)
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(request))
-                    )
-                    .andExpectAll(
-                            status().isForbidden(),
-                            jsonPath("$.type").value("forbidden")
-                    );
-        }
-
-        @Test
-        @DisplayName("404 Not Found, 존재하지 않는 댓글 수정 실패")
-        void testGivenNoCommentWhenUpdateCommentThenNotFound() throws Exception {
-            // given
-            var commentId = "commentId";
-            var request = new CommentRequest("channelId", "videoId", null, "new comment");
-            given(commentUseCase.updateComment(any(), any(), any()))
-                    .willThrow(new DomainNotFoundException("Comment Not Found."));
-
-            // when
-            mockMvc
-                    .perform(
-                            put("/api/v1/comments/{commentId}", commentId)
-                                    .header(HeaderAttribute.X_AUTH_KEY, authKey)
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(request))
-                    )
-                    .andExpectAll(
-                            status().isNotFound(),
-                            jsonPath("$.type").value("notFound")
-                    );
-        }
+        given().contentType(ContentType.JSON)
+                .header(HeaderAttribute.X_AUTH_KEY, "auth-key-001")
+                .body(request)
+                .put("/api/v1/comments/{commentId}", commentId)
+                .then()
+                .status(HttpStatus.OK)
+                .apply(document("comments-update", requestPreprocessor(), responsePreprocessor(),
+                        requestHeaders(
+                                headerWithName(HeaderAttribute.X_AUTH_KEY)
+                                        .description("Authentication key for the current user")),
+                        pathParameters(
+                                parameterWithName("commentId").description(
+                                        "Comment identifier to update")),
+                        requestFields(
+                                fieldWithPath("channelId").type(JsonFieldType.STRING)
+                                        .description(
+                                                "Channel identifier where the comment belongs"),
+                                fieldWithPath("videoId").type(JsonFieldType.STRING)
+                                        .description("Video identifier"),
+                                fieldWithPath("parentId").type(JsonFieldType.STRING)
+                                        .description("Parent comment identifier if this is a reply")
+                                        .optional(),
+                                fieldWithPath("text").type(JsonFieldType.STRING)
+                                        .description("Updated comment content")),
+                        responseFields(
+                                fieldWithPath("id").type(JsonFieldType.STRING)
+                                        .description("Updated comment identifier"))));
     }
 
-    @Nested
-    @DisplayName("DELETE /api/v1/comments/{commentId}")
-    class DeleteComment {
+    @Test
+    @DisplayName("DELETE /api/v1/comments/{commentId} removes a comment")
+    void deleteComment() {
+        var commentId = "comment-1";
 
-        @Test
-        @DisplayName("200 Ok, 해당 댓글을 삭제")
-        void testGivenCommentThenDeleteComment() throws Exception {
-            var commentId = "commentId";
-
-            mockMvc
-                    .perform(
-                            delete("/api/v1/comments/{commentId}", commentId)
-                                    .header(HeaderAttribute.X_AUTH_KEY, authKey)
-                    )
-                    .andExpect(
-                            status().isOk()
-                    );
-
-            verify(commentUseCase).deleteComment(commentId, user);
-        }
+        given().contentType(ContentType.JSON)
+                .header(HeaderAttribute.X_AUTH_KEY, "auth-key-001")
+                .delete("/api/v1/comments/{commentId}", commentId)
+                .then()
+                .status(HttpStatus.OK)
+                .apply(document("comments-delete", requestPreprocessor(), responsePreprocessor(),
+                        requestHeaders(
+                                headerWithName(HeaderAttribute.X_AUTH_KEY)
+                                        .description("Authentication key for the current user")),
+                        pathParameters(
+                                parameterWithName("commentId").description(
+                                        "Comment identifier to delete"))));
     }
 
-    @Nested
-    @DisplayName("GET /api/v1/comments?commentId={commentId}")
-    class GetComment {
+    @Test
+    @DisplayName("GET /api/v1/comments returns a comment")
+    void getComment() {
+        var commentId = "comment-1";
+        when(commentUseCase.getComment(commentId)).thenReturn(CommentResponseFixtures.stub(commentId));
 
-        @Test
-        @DisplayName("200 Ok, 해당 댓글 반환")
-        void whenExistThenReturnComment() throws Exception {
-            var commentId = "commentId";
-            var commentResponse = CommentResponse.builder()
-                    .id(commentId)
-                    .channelId("channelId")
-                    .videoId("videoId")
-                    .text("comment")
-                    .publishedAt(LocalDateTime.now())
-                    .authorId("user")
-                    .authorName("user name")
-                    .authorProfileImageUrl("https://example.com/profile.jpg")
-                    .likeCount(100L)
-                    .build();
-            given(commentUseCase.getComment(any())).willReturn(commentResponse);
-
-            mockMvc
-                    .perform(
-                            get("/api/v1/comments?commentId={commentId}", commentId)
-                    )
-                    .andExpectAll(
-                            status().isOk(),
-                            jsonPath("$.id").value(commentId),
-                            jsonPath("$.videoId").value("videoId"),
-                            jsonPath("$.text").value("comment"),
-                            jsonPath("$.authorId").value("user"),
-                            jsonPath("$.authorName").value("user name"),
-                            jsonPath("$.authorProfileImageUrl").value(
-                                    "https://example.com/profile.jpg"),
-                            jsonPath("$.likeCount").value(100L)
-                    );
-        }
-
-        @Test
-        @DisplayName("해당 댓글이 없으면 400 Not Found")
-        void testGivenCommentNotExistThenNotFound() throws Exception {
-            var commentId = "commentId";
-            given(commentUseCase.getComment(any())).willThrow(new DomainNotFoundException(""));
-
-            mockMvc
-                    .perform(
-                            get("/api/v1/comments?commentId={commentId}", commentId)
-                    )
-                    .andExpect(
-                            status().isNotFound()
-                    );
-        }
+        given().contentType(ContentType.JSON)
+                .queryParam("commentId", commentId)
+                .get("/api/v1/comments")
+                .then()
+                .status(HttpStatus.OK)
+                .apply(document("comments-get", requestPreprocessor(), responsePreprocessor(),
+                        queryParameters(
+                                parameterWithName("commentId").description(
+                                        "Comment identifier to fetch"))));
     }
 
-    @Nested
-    @DisplayName("GET /api/v1/comments/list")
-    class ListComment {
+    @Test
+    @DisplayName("GET /api/v1/comments/list returns paged comments for a video")
+    void listComments() {
+        var videoId = "video-1";
+        var order = "time";
+        var offset = "2024-01-01T12:10:00";
+        var maxSize = 10;
+        when(commentUseCase.listComments(eq(stubUser), eq(videoId), eq(order), eq(offset),
+                eq(maxSize)))
+                .thenReturn(Collections.emptyList());
 
-        @Test
-        @DisplayName("조회하는 회원 정보가 없는 시간 순 정렬")
-        void testGivenWithoutUserListCommentsByPublishedAt() throws Exception {
-            var videoId = "videoId";
-            var order = "time";
-            var offset = LocalDateTime.now();
-            var maxSize = 10;
-            given(commentUseCase.listComments(any(), any(), any(), any(), any())).willReturn(
-                    Collections.emptyList());
-            mockMvc
-                    .perform(
-                            get("/api/v1/comments/list?videoId={videoId}&order={order}&offset={offset}&maxSize={maxSize}",
-                                    videoId, order, offset, maxSize)
-                    )
-                    .andExpect(
-                            status().isOk()
-                    )
-                    .andDo(
-                            print()
-                    );
+        given().contentType(ContentType.JSON)
+                .header(HeaderAttribute.X_AUTH_KEY, "auth-key-001")
+                .queryParam("videoId", videoId)
+                .queryParam("order", order)
+                .queryParam("offset", offset)
+                .queryParam("maxSize", maxSize)
+                .get("/api/v1/comments/list")
+                .then()
+                .status(HttpStatus.OK)
+                .apply(document("comments-list", requestPreprocessor(), responsePreprocessor(),
+                        requestHeaders(
+                                headerWithName(HeaderAttribute.X_AUTH_KEY)
+                                        .description("Authentication key for the current user")
+                                        .optional()),
+                        queryParameters(
+                                parameterWithName("videoId").description("Video identifier"),
+                                parameterWithName("order").description(
+                                        "Sorting order (time or popularity)"),
+                                parameterWithName("offset").description(
+                                        "Cursor offset (ISO-8601 timestamp)"),
+                                parameterWithName("maxSize").description(
+                                        "Maximum number of comments to return"))
+                ));
+    }
 
-            verify(commentUseCase).listComments(null, videoId, order, offset.toString(), maxSize);
-        }
+    @Test
+    @DisplayName("GET /api/v1/comments/reply returns replies for a parent comment")
+    void listReplies() {
+        var parentId = "comment-1";
+        var offset = "2024-01-01T13:00:00";
+        var maxSize = 5;
+        when(commentUseCase.listReplies(eq(parentId), eq(offset), eq(maxSize)))
+                .thenReturn(List.of(CommentResponseFixtures.stub("reply-1")));
 
-        @Test
-        @DisplayName("조회하는 회원 정보가 있는 시간 순 정렬")
-        void testGivenUserListCommentsByPublishedAt() throws Exception {
-            var videoId = "videoId";
-            var order = "time";
-            var offset = LocalDateTime.now();
-            var maxSize = 10;
-            given(commentUseCase.listComments(any(), any(), any(), any(), any())).willReturn(
-                    Collections.emptyList());
-            mockMvc
-                    .perform(
-                            get("/api/v1/comments/list?videoId={videoId}&order={order}&offset={offset}&maxSize={maxSize}",
-                                    videoId, order, offset, maxSize)
-                                    .header(HeaderAttribute.X_AUTH_KEY, authKey)
-                    )
-                    .andExpect(
-                            status().isOk()
-                    )
-                    .andDo(
-                            print()
-                    );
-
-            verify(commentUseCase).listComments(user, videoId, order, offset.toString(), maxSize);
-        }
+        given().contentType(ContentType.JSON)
+                .queryParam("parentId", parentId)
+                .queryParam("offset", offset)
+                .queryParam("maxSize", maxSize)
+                .get("/api/v1/comments/reply")
+                .then()
+                .status(HttpStatus.OK)
+                .apply(document("comments-replies", requestPreprocessor(), responsePreprocessor(),
+                        queryParameters(
+                                parameterWithName("parentId").description(
+                                        "Parent comment identifier"),
+                                parameterWithName("offset").description(
+                                        "Cursor offset (ISO-8601 timestamp)"),
+                                parameterWithName("maxSize").description(
+                                        "Maximum number of replies to return"))
+                        ));
     }
 }

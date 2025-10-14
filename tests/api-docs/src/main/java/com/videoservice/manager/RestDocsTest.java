@@ -15,6 +15,9 @@ import org.springframework.restdocs.RestDocumentationExtension;
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.test.web.servlet.setup.StandaloneMockMvcBuilder;
+
+import java.util.function.Consumer;
 
 @Tag("restdocs")
 @ExtendWith(RestDocumentationExtension.class)
@@ -34,17 +37,24 @@ public abstract class RestDocsTest {
     }
 
     protected MockMvcRequestSpecification mockController(Object controller) {
-        MockMvc mockMvc = createMockMvc(controller);
-        return RestAssuredMockMvc.given().mockMvc(mockMvc);
+        return mockController(controller, builder -> {
+        });
     }
 
-    private MockMvc createMockMvc(Object controller) {
+    protected MockMvcRequestSpecification mockController(
+            Object controller,
+            Consumer<StandaloneMockMvcBuilder> customizer
+    ) {
         MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter(objectMapper());
 
-        return MockMvcBuilders.standaloneSetup(controller)
+        StandaloneMockMvcBuilder builder = MockMvcBuilders.standaloneSetup(controller)
                 .apply(MockMvcRestDocumentation.documentationConfiguration(restDocumentation))
-                .setMessageConverters(converter)
-                .build();
+                .setMessageConverters(converter);
+
+        customizer.accept(builder);
+
+        MockMvc mockMvc = builder.build();
+        return RestAssuredMockMvc.given().mockMvc(mockMvc);
     }
 
     private ObjectMapper objectMapper() {

@@ -14,5 +14,4 @@ public class Book {
     String publisher;
     LocalDate pubDate;
     String isbn;
-
 }

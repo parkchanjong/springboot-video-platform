@@ -33,19 +33,6 @@
 - `video-adapters`: 외부 인프라와 통신하기 위한 모듈
 - `video-commons`: 공통으로 사용되는 유틸리티를 모아둔 모듈
 
-## 외부 라이브러리 목록
-
-| Dependency                                          | Version | Purpose                                                            |
-| ---------------------------------------------------- | ------- | ------------------------------------------------------------------ |
-| spring-cloud-starter-circuitbreaker-resilience4j     | 2.0.2   | 서킷브레이커 기능을 제공하는 라이브러리                                |
-| it.ozimov:embedded-redis                            | 0.7.2   | 테스트용 내장 Redis 인스턴스를 제공하는 라이브러리                         |
-| com.querydsl:querydsl-jpa                            | 5.0.0   | JPA를 사용하여 타입 안전한 쿼리를 작성할 수 있게 도와주는 라이브러리    |
-| com.querydsl:querydsl-apt                            | 5.0.0   | Querydsl을 사용하기 위한 애노테이션 프로세서 라이브러리                 |
-
-| Test Dependency                                     | Version | Purpose                                        |
-| ---------------------------------------------------- | ------- | ---------------------------------------------- |
-
-
 ## Rules
 
 다음의 룰을 따릅니다.
