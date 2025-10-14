@@ -11,7 +11,6 @@ dependencies {
 
     testImplementation(project(":testFixtures"))
     testImplementation(project(":tests:api-docs"))
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
 
 val appMainClassName = "com.videoservice.manager.VideoInformationManagerApplication"

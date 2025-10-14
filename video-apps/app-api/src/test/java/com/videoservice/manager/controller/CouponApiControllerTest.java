@@ -1,83 +1,53 @@
 package com.videoservice.manager.controller;
 
-import static org.assertj.core.api.BDDAssertions.then;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.verify;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static com.videoservice.manager.RestDocsUtils.requestPreprocessor;
+import static com.videoservice.manager.RestDocsUtils.responsePreprocessor;
+import static org.mockito.Mockito.mock;
+import static org.springframework.restdocs.headers.HeaderDocumentation.headerWithName;
+import static org.springframework.restdocs.headers.HeaderDocumentation.requestHeaders;
+import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
+import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
+import static org.springframework.restdocs.request.RequestDocumentation.queryParameters;
 
 import com.videoservice.manager.CouponUseCase;
-import com.videoservice.manager.LoadUserPort;
-import com.videoservice.manager.UserSessionPort;
+import com.videoservice.manager.RestDocsTest;
 import com.videoservice.manager.attribute.HeaderAttribute;
-import com.videoservice.manager.domain.user.UserFixtures;
-import com.videoservice.manager.user.User;
-import java.util.Optional;
-import java.util.UUID;
+import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.http.HttpStatus;
 
-@WebMvcTest(CouponApiController.class)
-class CouponApiControllerTest {
+class CouponApiControllerTest extends RestDocsTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @MockBean
     private CouponUseCase couponUseCase;
 
-    @MockBean
-    private UserSessionPort userSessionPort;
-
-    @MockBean
-    private LoadUserPort loadUserPort;
-
-    private String authKey;
-    private User user;
+    private CouponApiController controller;
 
     @BeforeEach
     void setUp() {
-        authKey = UUID.randomUUID().toString();
-        user = UserFixtures.stub();
-
-        given(userSessionPort.getUserId(anyString())).willReturn(user.getId());
-        given(loadUserPort.loadUser(anyString())).willReturn(Optional.of(user));
+        couponUseCase = mock(CouponUseCase.class);
+        controller = new CouponApiController(couponUseCase);
+        mockMvc = mockController(controller);
     }
 
     @Test
-    @DisplayName("POST /api/v1/coupons issues coupon for authenticated user")
-    void testIssueCoupon() throws Exception {
-        // Given
+    @DisplayName("POST /api/v1/coupons issues a coupon for the authenticated user")
+    void issueCoupon() {
         var couponPolicyId = "coupon-policy-id";
 
-        given(userSessionPort.getUserId(authKey)).willReturn(user.getId());
-        given(loadUserPort.loadUser(user.getId())).willReturn(Optional.of(user));
-
-        // When & Then
-        mockMvc
-                .perform(
-                        post("/api/v1/coupons")
-                                .header(HeaderAttribute.X_AUTH_KEY, authKey)
-                                .param("couponPolicyId", couponPolicyId)
-                )
-                .andExpect(status().isOk());
-
-        verify(couponUseCase).issueCoupon(
-                argThat(actual -> {
-                    then(actual.getId()).isEqualTo(user.getId());
-                    then(actual.getName()).isEqualTo(user.getName());
-                    then(actual.getProfileImageUrl()).isEqualTo(user.getProfileImageUrl());
-                    return true;
-                }),
-                eq(couponPolicyId)
-        );
+        given().contentType(ContentType.JSON)
+                .header(HeaderAttribute.X_AUTH_KEY, "auth-key-001")
+                .queryParam("couponPolicyId", couponPolicyId)
+                .post("/api/v1/coupons")
+                .then()
+                .status(HttpStatus.OK)
+                .apply(document("coupons-issue", requestPreprocessor(), responsePreprocessor(),
+                        requestHeaders(
+                                headerWithName(HeaderAttribute.X_AUTH_KEY).description(
+                                        "Authentication key for the current user")),
+                        queryParameters(
+                                parameterWithName("couponPolicyId").description(
+                                        "Identifier of the coupon policy to issue"))));
     }
 }

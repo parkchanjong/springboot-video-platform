@@ -5,7 +5,6 @@ import static com.videoservice.manager.RestDocsUtils.responsePreprocessor;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.restdocs.headers.HeaderDocumentation.headerWithName;
 import static org.springframework.restdocs.headers.HeaderDocumentation.requestHeaders;
@@ -20,21 +19,18 @@ import static org.springframework.restdocs.request.RequestDocumentation.queryPar
 import com.videoservice.manager.CommentUseCase;
 import com.videoservice.manager.RestDocsTest;
 import com.videoservice.manager.attribute.HeaderAttribute;
-import com.videoservice.manager.comment.CommentResponse;
 import com.videoservice.manager.domain.comment.CommentFixtures;
 import com.videoservice.manager.domain.comment.CommentResponseFixtures;
 import com.videoservice.manager.domain.user.UserFixtures;
 import com.videoservice.manager.dto.CommentRequest;
 import com.videoservice.manager.user.User;
 import io.restassured.http.ContentType;
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
-import org.springframework.restdocs.payload.FieldDescriptor;
 import org.springframework.restdocs.payload.JsonFieldType;
 
 class CommentApiControllerTest extends RestDocsTest {
@@ -147,7 +143,8 @@ class CommentApiControllerTest extends RestDocsTest {
     @DisplayName("GET /api/v1/comments returns a comment")
     void getComment() {
         var commentId = "comment-1";
-        when(commentUseCase.getComment(commentId)).thenReturn(CommentResponseFixtures.stub(commentId));
+        when(commentUseCase.getComment(commentId)).thenReturn(
+                CommentResponseFixtures.stub(commentId));
 
         given().contentType(ContentType.JSON)
                 .queryParam("commentId", commentId)
@@ -220,6 +217,6 @@ class CommentApiControllerTest extends RestDocsTest {
                                         "Cursor offset (ISO-8601 timestamp)"),
                                 parameterWithName("maxSize").description(
                                         "Maximum number of replies to return"))
-                        ));
+                ));
     }
 }

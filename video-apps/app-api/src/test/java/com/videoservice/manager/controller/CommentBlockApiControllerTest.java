@@ -1,67 +1,55 @@
 package com.videoservice.manager.controller;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.willDoNothing;
-import static org.mockito.Mockito.verify;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static com.videoservice.manager.RestDocsUtils.requestPreprocessor;
+import static com.videoservice.manager.RestDocsUtils.responsePreprocessor;
+import static org.mockito.Mockito.mock;
+import static org.springframework.restdocs.headers.HeaderDocumentation.headerWithName;
+import static org.springframework.restdocs.headers.HeaderDocumentation.requestHeaders;
+import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
+import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
+import static org.springframework.restdocs.request.RequestDocumentation.queryParameters;
 
 import com.videoservice.manager.CommentBlockUseCase;
-import com.videoservice.manager.LoadUserPort;
-import com.videoservice.manager.UserSessionPort;
+import com.videoservice.manager.RestDocsTest;
 import com.videoservice.manager.attribute.HeaderAttribute;
-import com.videoservice.manager.domain.user.UserFixtures;
-import com.videoservice.manager.user.User;
-import java.util.Optional;
-import java.util.UUID;
+import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.http.HttpStatus;
 
-@WebMvcTest(CommentBlockApiController.class)
-class CommentBlockApiControllerTest {
+class CommentBlockApiControllerTest extends RestDocsTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @MockBean
     private CommentBlockUseCase commentBlockUseCase;
-    @MockBean
-    private UserSessionPort userSessionPort;
-    @MockBean
-    private LoadUserPort loadUserPort;
 
-    private String authKey;
-    private User user;
+    private CommentBlockApiController controller;
 
     @BeforeEach
     void setUp() {
-        authKey = UUID.randomUUID().toString();
-        user = UserFixtures.stub();
+        commentBlockUseCase = mock(CommentBlockUseCase.class);
+        controller = new CommentBlockApiController(commentBlockUseCase);
 
-        given(userSessionPort.getUserId(anyString())).willReturn(user.getId());
-        given(loadUserPort.loadUser(anyString())).willReturn(Optional.of(user));
+        mockMvc = mockController(controller);
     }
 
     @Test
-    void testBlockComment() throws Exception {
-        var commentId = "commentId";
-        willDoNothing().given(commentBlockUseCase).blockComment(any(), any());
+    @DisplayName("POST /api/v1/comments/block blocks comments for the authenticated user")
+    void blockComment() {
+        var commentId = "comment-123";
 
-        mockMvc
-                .perform(
-                        post("/api/v1/comments/block?commentId={commentId}", commentId)
-                                .header(HeaderAttribute.X_AUTH_KEY, authKey)
-                )
-                .andExpect(
-                        status().isOk()
-                );
+        given().contentType(ContentType.JSON)
+                .header(HeaderAttribute.X_AUTH_KEY, "auth-key-001")
+                .queryParam("commentId", commentId)
+                .post("/api/v1/comments/block")
+                .then()
+                .status(HttpStatus.OK)
+                .apply(document("comments-block", requestPreprocessor(), responsePreprocessor(),
+                        requestHeaders(
+                                headerWithName(HeaderAttribute.X_AUTH_KEY).description(
+                                        "Authentication key for the current user")),
+                        queryParameters(
+                                parameterWithName("commentId").description(
+                                        "Comment identifier to block"))));
 
-        verify(commentBlockUseCase).blockComment(user, commentId);
     }
 }
