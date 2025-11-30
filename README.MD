@@ -1,5 +1,7 @@
 # springboot-video-platform
 
+<br/>
+
 ## 기능 요구사항
 
 - 비디오 조회
@@ -8,19 +10,24 @@
 - 새로운 비디오 알림 전송
 - 댓글 작성
 - 댓글 차단
-- 책 검색
+- 도서 검색
 - 쿠폰 발급
 
-## 개발 스택
+<br/>
+
+## 개발 환경
 
 - Java
 - Spring Boot
 - Gradle
 - JPA
 - QueryDSL
+- MySQL
 - mongodb
 - redis
 - kafka
+
+<br/>
 
 ## 프로젝트 모듈 구조
 
@@ -32,6 +39,36 @@
 - `video-apps`: 클라이언트가 호출할 수 있는 REST API 와 배치잡을 모아둔 모듈
 - `video-adapters`: 외부 인프라와 통신하기 위한 모듈
 - `video-commons`: 공통으로 사용되는 유틸리티를 모아둔 모듈
+
+<br/>
+
+## 실행방법
+
+```shell
+docker compose up
+
+./gradlew bootRun
+```
+
+<br/>
+
+## Architecture
+
+<img width="511" height="614" alt="스크린샷 2025-11-28 오전 11 58 31" src="https://github.com/user-attachments/assets/08358760-0957-4bfd-a78d-4fcc1ed97100" />
+
+<br/>
+
+## Flow
+
+* 비디오 생성
+
+<img width="771" height="335" alt="스크린샷 2025-11-30 오후 11 40 10" src="https://github.com/user-attachments/assets/8ba52d14-b4db-441d-982d-6926fbbd2a91" />
+
+* 채널 구독 등록
+
+<img width="787" height="347" alt="스크린샷 2025-11-30 오후 11 40 04" src="https://github.com/user-attachments/assets/ac776129-d4f9-4c78-8c48-514f31a9df4c" />
+
+<br/>
 
 ## Rules
 
