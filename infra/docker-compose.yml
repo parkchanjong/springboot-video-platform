@@ -93,7 +93,6 @@ services:
       - '--web.listen-address=:9091'
     ports:
       - "9091:9091"
-    restart: always
     networks:
       - video_service_network
 
@@ -111,7 +110,6 @@ services:
       - "3000:3000"
     depends_on:
       - prometheus
-    restart: always
     networks:
       - video_service_network
   jenkins:
