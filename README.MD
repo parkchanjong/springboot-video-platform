@@ -173,6 +173,147 @@ docker compose up
 
 <br/>
 
+# k6 부하 테스트 스크립트
+
+## 테스트 대상 기술 스택
+
+| 시나리오 | 검증 대상 | 핵심 지표 |
+|---------|---------|---------|
+| video-load | Redis 캐시 (비디오 조회), Redis INCR (조회수) | 캐시 히트율 >80%, P95 <100ms |
+| comment-load | MongoDB CRUD, 커서 페이지네이션 | P95 <200ms (작성), <150ms (조회) |
+| coupon-load | Redisson 분산 락, Race Condition 방어 | 초과 발급 0건 (≤500건) |
+| stress-test | 전체 시스템 한계점 | P99 <2000ms |
+| spike-test | Circuit Breaker (Resilience4j), 급격한 트래픽 대응 | P99 <3000ms |
+
+## 사전 준비
+
+### 2. 시드 데이터 DB 등록
+
+MySQL에 다음 ID로 데이터가 존재해야 합니다:
+- 비디오: `video-seed-001` ~ `video-seed-005`
+- 채널: `channel-seed-001` ~ `channel-seed-003`
+
+MongoDB에 다음 ID로 데이터가 존재해야 합니다:
+- 댓글: `comment-seed-001` ~ `comment-seed-003`
+- 부모 댓글: `parent-comment-001` ~ `parent-comment-002`
+
+### 3. Redis 세션 등록
+
+다음 토큰이 Redis에 세션으로 등록되어야 합니다 (`x-auth-key` 헤더 인증):
+- `test-auth-token-001` ~ `test-auth-token-005`
+
+### 4. 쿠폰 정책 생성
+
+쿠폰 분산 락 테스트 전 다음 정책이 존재해야 합니다:
+- ID: `coupon-policy-concurrent-001`
+- `totalQuantity: 500`
+
+## 실행 방법
+
+### 기본 실행 (로컬 서버)
+
+```bash
+# Smoke Test (기본 동작 확인 — 배포 직후 필수)
+k6 run k6-scripts/scenarios/smoke/smoke-test.js
+
+# Video Load Test (Redis 캐시 성능)
+k6 run k6-scripts/scenarios/load/video-load.js
+
+# Comment Load Test (MongoDB CRUD)
+k6 run k6-scripts/scenarios/load/comment-load.js
+
+# Coupon Load Test (Redisson 분산 락) — 핵심
+k6 run k6-scripts/scenarios/load/coupon-load.js
+
+# Stress Test (한계점 탐색)
+k6 run k6-scripts/scenarios/stress/stress-test.js
+
+# Spike Test (트래픽 폭증)
+k6 run k6-scripts/scenarios/spike/spike-test.js
+```
+
+### 환경변수로 서버 지정
+
+```bash
+BASE_URL=http://your-server:8080 k6 run k6-scripts/scenarios/smoke/smoke-test.js
+```
+
+### 결과를 JSON으로 저장
+
+```bash
+k6 run --out json=result.json k6-scripts/scenarios/load/coupon-load.js
+```
+
+### Grafana + InfluxDB 연동 (실시간 모니터링)
+
+```bash
+k6 run --out influxdb=http://localhost:8086/k6 k6-scripts/scenarios/stress/stress-test.js
+```
+
+## 성공 기준
+
+| 시나리오 | 목표 지표 | 임계값 |
+|---------|---------|-------|
+| Smoke | P95 응답시간 | < 500ms |
+| Smoke | 실패율 | < 1% |
+| Video Load | P95 응답시간 (조회) | < 100ms |
+| Video Load | Redis 캐시 히트율 | > 80% |
+| Video Load | 실패율 | < 1% |
+| Comment Load | P95 응답시간 (작성) | < 200ms |
+| Comment Load | P95 응답시간 (목록) | < 150ms |
+| Comment Load | 실패율 | < 2% |
+| Coupon Load | 발급 성공 건수 | ≤ 500건 (절대) |
+| Coupon Load | 서버 에러율 | < 5% |
+| Stress | P99 응답시간 | < 2000ms |
+| Stress | 실패율 | < 10% |
+| Spike | P99 응답시간 | < 3000ms |
+| Spike | 실패율 | < 15% |
+
+## API 엔드포인트 참조
+
+| 기능 | 메서드 | URL | 인증 필요 |
+|-----|-------|-----|---------|
+| 비디오 조회 | GET | `/api/v1/videos/{videoId}` | 불필요 |
+| 채널별 비디오 목록 | GET | `/api/v1/videos?channelId={id}` | 불필요 |
+| 비디오 생성 | POST | `/api/v1/videos` | 불필요 |
+| 조회수 증가 | POST | `/api/v1/videos/{videoId}/view` | 불필요 |
+| 채널 생성 | POST | `/api/v1/channels` | 불필요 |
+| 채널 수정 | PUT | `/api/v1/channels/{channelId}` | 불필요 |
+| 채널 조회 | GET | `/api/v1/channels/{channelId}` | 불필요 |
+| 댓글 작성 | POST | `/api/v1/comments` | 필요 |
+| 댓글 수정 | PUT | `/api/v1/comments/{commentId}` | 필요 |
+| 댓글 삭제 | DELETE | `/api/v1/comments/{commentId}` | 필요 |
+| 댓글 목록 | GET | `/api/v1/comments/list?videoId=&order=&offset=&maxSize=` | 필요 |
+| 대댓글 목록 | GET | `/api/v1/comments/reply?parentId=&offset=&maxSize=` | 불필요 |
+| 구독 | POST | `/api/v1/subscribe?channelId={id}` | 필요 |
+| 구독 취소 | DELETE | `/api/v1/subscribe?subscribeId={id}` | 필요 |
+| 내 구독 목록 | GET | `/api/v1/subscribe/mine` | 필요 |
+| 쿠폰 발급 | POST | `/api/v1/coupons?couponPolicyId={id}` | 필요 |
+| 비디오 좋아요 | POST | `/api/v1/videos/rate?videoId=&rating=like` | 필요 |
+| 도서 검색 | GET | `/api/v1/book/list?query=&page=&size=` | 불필요 |
+
+> 인증: `x-auth-key` 헤더에 토큰 값 전달 (HeaderAttribute.java 참조)
+
+## 커스텀 메트릭
+
+| 메트릭 | 유형 | 설명 |
+|-------|------|-----|
+| `video_cache_hit_rate` | Rate | 50ms 미만 응답 = Redis 캐시 히트 판정 |
+| `video_get_duration` | Trend | 비디오 단건 조회 응답시간 |
+| `video_view_duration` | Trend | 조회수 증가 응답시간 |
+| `comment_create_duration` | Trend | 댓글 작성 응답시간 |
+| `comment_list_duration` | Trend | 댓글 목록 조회 응답시간 |
+| `comment_reply_duration` | Trend | 대댓글 목록 조회 응답시간 |
+| `coupon_issue_success_total` | Counter | 쿠폰 발급 성공 건수 |
+| `coupon_issue_conflict_total` | Counter | 재고 소진/중복 (정상 실패) |
+| `coupon_issue_failed_total` | Counter | 서버 에러 (비정상 실패) |
+| `coupon_success_rate` | Rate | 쿠폰 발급 성공률 |
+| `circuit_breaker_open_total` | Counter | Circuit Breaker 오픈 횟수 |
+| `spike_video_get_duration` | Trend | 스파이크 구간 비디오 조회 응답시간 |
+| `spike_error_rate` | Rate | 스파이크 구간 에러율 |
+
+<br/>
+
 ## Rules
 
 다음의 룰을 따릅니다.
