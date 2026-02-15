@@ -19,6 +19,14 @@ public class RedisKeyGenerator {
         return SUBSCRIBE_USER + SEPARATOR + userId;
     }
 
+    public static String getVideoKey(String videoId) {
+        return VIDEO + SEPARATOR + videoId;
+    }
+
+    public static String getVideoListKey(String channelId) {
+        return VIDEO_LIST + SEPARATOR + channelId;
+    }
+
     public static String getVideoViewCountKey(String videoId) {
         return VIDEO_VIEW_COUNT + SEPARATOR +  videoId;
     }
