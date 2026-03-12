@@ -15,7 +15,11 @@ scrape_configs:
     static_configs:
       - targets: ['docker.for.mac.localhost:8080']
 
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
 alerting:
   alertmanagers:
     - static_configs:
-        - targets:
+        - targets: []
