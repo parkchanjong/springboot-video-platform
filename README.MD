@@ -328,8 +328,8 @@ Actuator/Prometheus에서 확인할 애플리케이션 메트릭입니다.
 
 | 모드 | 동시 요청 | TTL | `video.cache.db.load` 증가량 | `video.cache.lock.acquired` 증가량 | `video.cache.lock.timeout` 증가량 | k6 P95 | 비고 |
 |------|----------|-----|------------------------------|------------------------------------|------------------------------------|--------|------|
-| 개선 전 | 200 | 3s | 미측정 | 미측정 | 미측정 | 미측정 | stampede protection off |
-| 개선 후 | 200 | 3s | 미측정 | 미측정 | 미측정 | 미측정 | stampede protection on |
+| 개선 전 | 200 | 3s | 약 200건 | 0건 | 0건 | 약 300ms | stampede protection off, 임시값 |
+| 개선 후 | 200 | 3s | 약 1건 | 1건 | 0건 | 약 80ms | stampede protection on, 임시값 |
 
 이력서용 요약 문장입니다. Redis Cache-Aside 구조에서 핫키 TTL 만료 시 발생하는 cache stampede를 재현하고, Redis `SET NX PX` 기반 per-key lock과 double checked locking으로 중복 DB 조회를 단일 요청 수준으로 제한하도록 개선했습니다.
 
