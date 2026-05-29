@@ -61,6 +61,42 @@
 
 ---
 
+### 4-1. Kafka 알림 컨슈머 — processed_event 기반 멱등 처리
+
+| 항목 | 내용 |
+|------|------|
+| **문제사항** | Kafka consumer가 메시지를 처리한 뒤 offset commit 전에 장애가 발생하면 같은 알림 이벤트가 재전달되어 구독자에게 중복 알림을 보낼 수 있음 |
+| **원인파악** | 메시지에 idempotency key가 없고 consumer offset commit과 DB 트랜잭션이 분리되어 있어, 재처리 여부를 판단할 영속 상태가 없었음 |
+| **해결과정** | `NewVideoMessage`에 `eventId`를 추가하고, consumer가 `processed_event` 테이블에 `event_id`를 먼저 저장한 뒤 알림을 처리하도록 변경. Kafka offset은 DB 트랜잭션 commit 성공 후 manual ack로 처리 |
+| **결과** | 동일 `eventId` 재전달 시 알림 로직을 건너뛰고 ack만 수행. 처리 중 예외가 발생하면 `processed_event` 저장도 rollback되고 ack하지 않아 Kafka 재처리 가능 |
+
+변경 파일 목록.
+
+- `video-adapters/src/main/java/com/videoservice/manager/mq/dto/NewVideoMessage.java`
+- `video-adapters/src/main/java/com/videoservice/manager/mq/NewVideMessageProducer.java`
+- `video-adapters/src/main/java/com/videoservice/manager/mq/NewVideMessageConsumer.java`
+- `video-adapters/src/main/java/com/videoservice/manager/mq/config/KafkaConsumerConfig.java`
+- `video-adapters/src/main/java/com/videoservice/manager/jpa/event/ProcessedEventJpaEntity.java`
+- `video-adapters/src/main/java/com/videoservice/manager/jpa/event/ProcessedEventJpaRepository.java`
+- `video-adapters/src/test/java/com/videoservice/manager/mq/NewVideMessageConsumerTest.java`
+- `video-adapters/src/test/java/com/videoservice/manager/mq/NewVideMessageProducerTest.java`
+
+설계 이유.
+
+- `processed_event.event_id`를 PK와 unique key로 사용해 이미 처리된 이벤트와 동시 중복 처리 경쟁을 DB 제약으로 방어합니다.
+- consumer는 `enable.auto.commit=false`와 `AckMode.MANUAL`을 사용해 DB 트랜잭션이 성공한 뒤에만 offset을 ack합니다.
+- `topic`, `partition`, `offset`, `processed_at`을 함께 저장해 운영 중 중복 처리 판단과 메시지 추적이 가능하게 합니다.
+
+테스트 방법.
+
+- 중복 수신 검증은 `NewVideMessageConsumerTest.consumesSameEventOnlyOnceAndAcknowledgesBothDeliveries`에서 같은 `eventId`를 두 번 소비해 구독자 조회는 1회, ack는 2회 수행되는지 확인합니다.
+- 예외 재처리 검증은 `NewVideMessageConsumerTest.doesNotAcknowledgeWhenNotificationProcessingFails`에서 알림 처리 예외 시 rollback되고 ack하지 않는지 확인합니다.
+- unique 제약 검증은 `NewVideMessageConsumerTest.acknowledgesConcurrentDuplicateWithoutNotification`에서 `DataIntegrityViolationException`을 모사해 알림 없이 ack하는지 확인합니다.
+- producer eventId 검증은 `NewVideMessageProducerTest.sendsMessageWithGeneratedEventId`에서 UUID 형식의 `eventId`가 채워지는지 확인합니다.
+- 전체 adapter 검증 명령은 `./gradlew :video-adapters:test`입니다.
+
+---
+
 ### 5. 댓글 작성 — MongoDB 도입으로 계층 구조 쿼리 개선
 
 | 항목 | 내용 |
