@@ -3,6 +3,7 @@ package com.videoservice.manager.mq;
 import static com.videoservice.manager.mq.common.KafkaNames.TOPIC;
 
 import com.videoservice.manager.mq.dto.NewVideoMessage;
+import java.util.UUID;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
@@ -15,6 +16,6 @@ public class NewVideMessageProducer {
     }
 
     public void newVideMessageRequest(String channelId) {
-        kafkaTemplate.send(TOPIC, new NewVideoMessage(channelId));
+        kafkaTemplate.send(TOPIC, new NewVideoMessage(UUID.randomUUID().toString(), channelId));
     }
 }
