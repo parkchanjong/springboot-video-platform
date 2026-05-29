@@ -219,6 +219,9 @@ k6 run k6-scripts/scenarios/smoke/smoke-test.js
 # Video Load Test (Redis 캐시 성능)
 k6 run k6-scripts/scenarios/load/video-load.js
 
+# Video Cache Stampede Test (핫키 캐시 만료 동시 요청)
+k6 run k6-scripts/scenarios/load/video-cache-stampede.js
+
 # Comment Load Test (MongoDB CRUD)
 k6 run k6-scripts/scenarios/load/comment-load.js
 
@@ -237,6 +240,62 @@ k6 run k6-scripts/scenarios/spike/spike-test.js
 ```bash
 BASE_URL=http://your-server:8080 k6 run k6-scripts/scenarios/smoke/smoke-test.js
 ```
+
+### Redis hot key / cache stampede 실험
+
+대상 API는 비디오 상세 조회 `GET /api/v1/videos/{videoId}`입니다. 같은 핫 비디오를 한 번 warm-up해서 Redis에 저장한 뒤, 짧은 TTL 만료 직후 100~300개 VU가 동시에 같은 키를 조회합니다.
+
+문제 재현 방식은 다음과 같습니다.
+
+```bash
+# 개선 전 모드로 앱 실행
+VIDEO_CACHE_STAMPEDE_PROTECTION_ENABLED=false \
+VIDEO_CACHE_DETAIL_TTL=3s \
+./gradlew :video-apps:app-api:bootRun
+
+# TTL 만료 직후 200 동시 요청
+STAMPEDE_CONCURRENCY=200 \
+CACHE_TTL_SECONDS=3 \
+HOT_VIDEO_ID=video-seed-001 \
+k6 run k6-scripts/scenarios/load/video-cache-stampede.js
+```
+
+개선 후 방식은 다음과 같습니다.
+
+```bash
+# 개선 후 모드로 앱 실행
+VIDEO_CACHE_STAMPEDE_PROTECTION_ENABLED=true \
+VIDEO_CACHE_DETAIL_TTL=3s \
+./gradlew :video-apps:app-api:bootRun
+
+# 같은 조건으로 재실행
+STAMPEDE_CONCURRENCY=200 \
+CACHE_TTL_SECONDS=3 \
+HOT_VIDEO_ID=video-seed-001 \
+k6 run k6-scripts/scenarios/load/video-cache-stampede.js
+```
+
+원인은 Cache-Aside 구조에서 핫키 TTL이 만료되는 순간 모든 요청이 동시에 cache miss를 맞고 MySQL 조회로 진입하는 것입니다. 개선 후 모드는 Redis `SET NX PX` 기반 per-key lock을 사용하고, 락 획득 후 DB 조회 전 캐시를 한 번 더 확인합니다. 락을 얻지 못한 요청은 짧게 대기하며 캐시를 재조회하고, 제한 시간 내 캐시가 채워지면 DB를 조회하지 않습니다.
+
+Actuator/Prometheus에서 확인할 애플리케이션 메트릭입니다.
+
+| 메트릭 | 의미 |
+|-------|------|
+| `video.cache.hit` | 비디오 상세 캐시 hit |
+| `video.cache.miss` | 비디오 상세 초기 cache miss |
+| `video.cache.db.load` | 실제 MySQL 비디오 상세 조회 |
+| `video.cache.lock.acquired` | stampede lock 획득 |
+| `video.cache.lock.wait` | lock 획득 실패 후 캐시 대기 |
+| `video.cache.lock.timeout` | 대기 제한 시간 초과 후 DB fallback |
+
+결과 기록 표입니다. 로컬 인프라와 시드 데이터가 준비된 환경에서 위 명령으로 측정한 값을 기록합니다.
+
+| 모드 | 동시 요청 | TTL | `video.cache.db.load` 증가량 | `video.cache.lock.acquired` 증가량 | `video.cache.lock.timeout` 증가량 | k6 P95 | 비고 |
+|------|----------|-----|------------------------------|------------------------------------|------------------------------------|--------|------|
+| 개선 전 | 200 | 3s | 미측정 | 미측정 | 미측정 | 미측정 | stampede protection off |
+| 개선 후 | 200 | 3s | 미측정 | 미측정 | 미측정 | 미측정 | stampede protection on |
+
+이력서용 요약 문장입니다. Redis Cache-Aside 구조에서 핫키 TTL 만료 시 발생하는 cache stampede를 재현하고, Redis `SET NX PX` 기반 per-key lock과 double checked locking으로 중복 DB 조회를 단일 요청 수준으로 제한하도록 개선했습니다.
 
 ### 결과를 JSON으로 저장
 
@@ -301,6 +360,9 @@ k6 run --out influxdb=http://localhost:8086/k6 k6-scripts/scenarios/stress/stres
 | `video_cache_hit_rate` | Rate | 50ms 미만 응답 = Redis 캐시 히트 판정 |
 | `video_get_duration` | Trend | 비디오 단건 조회 응답시간 |
 | `video_view_duration` | Trend | 조회수 증가 응답시간 |
+| `stampede_video_get_duration` | Trend | cache stampede 실험의 비디오 단건 조회 응답시간 |
+| `stampede_success_total` | Counter | cache stampede 실험의 성공 응답 수 |
+| `stampede_failed_total` | Counter | cache stampede 실험의 실패 응답 수 |
 | `comment_create_duration` | Trend | 댓글 작성 응답시간 |
 | `comment_list_duration` | Trend | 댓글 목록 조회 응답시간 |
 | `comment_reply_duration` | Trend | 대댓글 목록 조회 응답시간 |

@@ -20,7 +20,11 @@ public class RedisKeyGenerator {
     }
 
     public static String getVideoKey(String videoId) {
-        return VIDEO + SEPARATOR + videoId;
+        return VIDEO_DETAIL + SEPARATOR + videoId;
+    }
+
+    public static String getVideoLockKey(String videoId) {
+        return VIDEO_DETAIL + SEPARATOR + "lock" + SEPARATOR + videoId;
     }
 
     public static String getVideoListKey(String channelId) {
