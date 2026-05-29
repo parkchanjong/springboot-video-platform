@@ -5,8 +5,10 @@ import static org.assertj.core.api.BDDAssertions.thenThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -19,6 +21,7 @@ import com.videoservice.manager.jpa.VideoJpaEntityFixtures;
 import com.videoservice.manager.jpa.video.VideoCustomRepository;
 import com.videoservice.manager.jpa.video.VideoJpaEntity;
 import com.videoservice.manager.jpa.video.VideoJpaRepository;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -35,16 +38,20 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.script.RedisScript;
 
 @ExtendWith(MockitoExtension.class)
 class VideoPersistenceAdapterTest {
     private VideoPersistenceAdapter sut;
+    private VideoCacheProperties videoCacheProperties;
+    private SimpleMeterRegistry meterRegistry;
 
     private final VideoJpaRepository videoJpaRepository = mock(VideoJpaRepository.class);
     private final VideoCustomRepository videoCustomRepository = mock(VideoCustomRepository.class);
     private final RedisTemplate<String, Long> redisTemplate = mock(RedisTemplate.class, Mockito.RETURNS_DEEP_STUBS);
     private final StringRedisTemplate stringRedisTemplate = mock(StringRedisTemplate.class, Mockito.RETURNS_DEEP_STUBS);
     private final ValueOperations<String, Long> valueOperations = mock(ValueOperations.class);
+    private final ValueOperations<String, String> stringValueOperations = mock(ValueOperations.class);
     // 프라이빗 필드 직렬화/역직렬화를 위해 필드 가시성 설정
     private final ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule())
@@ -53,8 +60,20 @@ class VideoPersistenceAdapterTest {
 
     @BeforeEach
     void setUp() {
-        sut = new VideoPersistenceAdapter(videoJpaRepository, videoCustomRepository, redisTemplate, stringRedisTemplate, objectMapper);
-        given(redisTemplate.opsForValue()).willReturn(valueOperations);
+        videoCacheProperties = new VideoCacheProperties();
+        videoCacheProperties.setStampedeProtectionEnabled(false);
+        meterRegistry = new SimpleMeterRegistry();
+        sut = new VideoPersistenceAdapter(
+                videoJpaRepository,
+                videoCustomRepository,
+                redisTemplate,
+                stringRedisTemplate,
+                objectMapper,
+                videoCacheProperties,
+                meterRegistry
+        );
+        lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        lenient().when(stringRedisTemplate.opsForValue()).thenReturn(stringValueOperations);
     }
 
     @Nested
@@ -64,7 +83,7 @@ class VideoPersistenceAdapterTest {
             // Given: Redis에 캐시된 JSON이 존재
             var video = VideoFixtures.stub("video1");
             var json = objectMapper.writeValueAsString(video);
-            given(stringRedisTemplate.opsForValue().get(anyString())).willReturn(json);
+            given(stringValueOperations.get(anyString())).willReturn(json);
 
             // When
             var result = sut.loadVideo("video1");
@@ -72,10 +91,11 @@ class VideoPersistenceAdapterTest {
             // Then: DB 호출 없이 캐시에서 반환
             then(result).extracting("id").isEqualTo("video1");
             verify(videoJpaRepository, never()).findById(any());
+            then(meterRegistry.counter("video.cache.hit").count()).isEqualTo(1);
         }
 
         @Test
-        void cacheMiss_existVideo_then_returnVideoAndCache() {
+        void cacheMiss_existVideo_then_returnVideoAndCache() throws Exception {
             // Given: 캐시 미스 (기본값 null 반환), DB에 데이터 존재
             var videoJpaEntity = VideoJpaEntityFixtures.stub("video1");
             given(videoJpaRepository.findById(any())).willReturn(Optional.of(videoJpaEntity));
@@ -85,7 +105,24 @@ class VideoPersistenceAdapterTest {
 
             // Then: DB 조회 후 Redis에 저장
             then(result).extracting("id").isEqualTo("video1");
-            verify(stringRedisTemplate.opsForValue()).set(anyString(), anyString(), any(Duration.class));
+            verify(stringValueOperations).set("video:detail:video1", objectMapper.writeValueAsString(result), Duration.ofHours(1));
+            then(meterRegistry.counter("video.cache.miss").count()).isEqualTo(1);
+            then(meterRegistry.counter("video.cache.db.load").count()).isEqualTo(1);
+        }
+
+        @Test
+        void cacheMiss_whenStampedeProtectionDisabled_then_eachRequestLoadsDb() {
+            // Given: 개선 전 모드에서는 캐시 miss마다 DB를 조회
+            var videoJpaEntity = VideoJpaEntityFixtures.stub("video1");
+            given(videoJpaRepository.findById(any())).willReturn(Optional.of(videoJpaEntity));
+
+            // When
+            sut.loadVideo("video1");
+            sut.loadVideo("video1");
+
+            // Then
+            verify(videoJpaRepository, times(2)).findById("video1");
+            then(meterRegistry.counter("video.cache.db.load").count()).isEqualTo(2);
         }
 
         @Test
@@ -99,6 +136,109 @@ class VideoPersistenceAdapterTest {
             // Then
             result.isInstanceOf(NoSuchElementException.class);
         }
+
+        @Test
+        void cacheMiss_whenLockAcquired_then_loadDbAndCache() throws Exception {
+            // Given
+            videoCacheProperties.setStampedeProtectionEnabled(true);
+            videoCacheProperties.setDetailTtl(Duration.ofSeconds(3));
+            var videoJpaEntity = VideoJpaEntityFixtures.stub("video1");
+            given(stringValueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class))).willReturn(true);
+            given(videoJpaRepository.findById("video1")).willReturn(Optional.of(videoJpaEntity));
+
+            // When
+            var result = sut.loadVideo("video1");
+
+            // Then
+            then(result).extracting("id").isEqualTo("video1");
+            verify(videoJpaRepository).findById("video1");
+            verify(stringValueOperations).set("video:detail:video1", objectMapper.writeValueAsString(result), Duration.ofSeconds(3));
+            verify(stringRedisTemplate).execute(any(RedisScript.class), any(List.class), anyString());
+            then(meterRegistry.counter("video.cache.lock.acquired").count()).isEqualTo(1);
+            then(meterRegistry.counter("video.cache.db.load").count()).isEqualTo(1);
+        }
+
+        @Test
+        void cacheMiss_whenCacheFilledAfterLockAcquired_then_returnCacheWithoutDbLoad() throws Exception {
+            // Given
+            videoCacheProperties.setStampedeProtectionEnabled(true);
+            var video = VideoFixtures.stub("video1");
+            var json = objectMapper.writeValueAsString(video);
+            given(stringValueOperations.get("video:detail:video1")).willReturn(null, json);
+            given(stringValueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class))).willReturn(true);
+
+            // When
+            var result = sut.loadVideo("video1");
+
+            // Then
+            then(result).extracting("id").isEqualTo("video1");
+            verify(videoJpaRepository, never()).findById(anyString());
+            verify(stringValueOperations, never()).set(anyString(), anyString(), any(Duration.class));
+            then(meterRegistry.counter("video.cache.lock.acquired").count()).isEqualTo(1);
+            then(meterRegistry.counter("video.cache.db.load").count()).isZero();
+        }
+
+        @Test
+        void cacheMiss_whenLockNotAcquiredAndCacheFilledWhileWaiting_then_returnCacheWithoutDbLoad() throws Exception {
+            // Given
+            videoCacheProperties.setStampedeProtectionEnabled(true);
+            videoCacheProperties.setLockWaitTimeout(Duration.ofMillis(20));
+            videoCacheProperties.setLockRetryInterval(Duration.ofMillis(1));
+            var video = VideoFixtures.stub("video1");
+            var json = objectMapper.writeValueAsString(video);
+            given(stringValueOperations.get("video:detail:video1")).willReturn(null, json);
+            given(stringValueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class))).willReturn(false);
+
+            // When
+            var result = sut.loadVideo("video1");
+
+            // Then
+            then(result).extracting("id").isEqualTo("video1");
+            verify(videoJpaRepository, never()).findById(anyString());
+            then(meterRegistry.counter("video.cache.lock.wait").count()).isEqualTo(1);
+            then(meterRegistry.counter("video.cache.lock.timeout").count()).isZero();
+        }
+
+        @Test
+        void cacheMiss_whenLockWaitTimeout_then_fallbackToDbLoad() {
+            // Given
+            videoCacheProperties.setStampedeProtectionEnabled(true);
+            videoCacheProperties.setLockWaitTimeout(Duration.ofMillis(2));
+            videoCacheProperties.setLockRetryInterval(Duration.ofMillis(1));
+            var videoJpaEntity = VideoJpaEntityFixtures.stub("video1");
+            given(stringValueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class))).willReturn(false);
+            given(videoJpaRepository.findById("video1")).willReturn(Optional.of(videoJpaEntity));
+
+            // When
+            var result = sut.loadVideo("video1");
+
+            // Then
+            then(result).extracting("id").isEqualTo("video1");
+            verify(videoJpaRepository).findById("video1");
+            then(meterRegistry.counter("video.cache.lock.wait").count()).isEqualTo(1);
+            then(meterRegistry.counter("video.cache.lock.timeout").count()).isEqualTo(1);
+        }
+
+        @Test
+        void cacheMiss_whenLockAcquired_then_unlockWithLuaScriptAndUuidValue() {
+            // Given
+            videoCacheProperties.setStampedeProtectionEnabled(true);
+            var videoJpaEntity = VideoJpaEntityFixtures.stub("video1");
+            given(stringValueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class))).willReturn(true);
+            given(videoJpaRepository.findById("video1")).willReturn(Optional.of(videoJpaEntity));
+            ArgumentCaptor<String> lockValueCaptor = ArgumentCaptor.forClass(String.class);
+
+            // When
+            sut.loadVideo("video1");
+
+            // Then
+            verify(stringValueOperations).setIfAbsent(
+                    Mockito.eq("video:detail:lock:video1"),
+                    lockValueCaptor.capture(),
+                    Mockito.eq(Duration.ofSeconds(5))
+            );
+            verify(stringRedisTemplate).execute(any(RedisScript.class), Mockito.eq(List.of("video:detail:lock:video1")), Mockito.eq(lockValueCaptor.getValue()));
+        }
     }
 
     @Nested
@@ -108,7 +248,7 @@ class VideoPersistenceAdapterTest {
             // Given: Redis에 목록 캐시가 존재
             var videos = List.of(VideoFixtures.stub("video1"), VideoFixtures.stub("video2"));
             var json = objectMapper.writeValueAsString(videos);
-            given(stringRedisTemplate.opsForValue().get(anyString())).willReturn(json);
+            given(stringValueOperations.get(anyString())).willReturn(json);
 
             // When
             var result = sut.loadVideoByChannel("channelId");
@@ -131,7 +271,7 @@ class VideoPersistenceAdapterTest {
 
             // Then: DB 조회 후 Redis에 저장
             then(result).hasSize(2).extracting("id").containsExactly("video1", "video2");
-            verify(stringRedisTemplate.opsForValue()).set(anyString(), anyString(), any(Duration.class));
+            verify(stringValueOperations).set(anyString(), anyString(), any(Duration.class));
         }
     }
 
@@ -149,7 +289,7 @@ class VideoPersistenceAdapterTest {
         then(argumentCaptor.getValue())
                 .hasFieldOrPropertyWithValue("title", video.getTitle())
                 .hasFieldOrPropertyWithValue("channelId", video.getChannelId());
-        verify(stringRedisTemplate).delete("video:videoId");
+        verify(stringRedisTemplate).delete("video:detail:videoId");
         verify(stringRedisTemplate).delete("video:list:channelId");
     }
 

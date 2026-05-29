@@ -43,3 +43,11 @@ external:
     url: https://dapi.kakao.com
     headers:
       rest-api-key: test
+
+video:
+  cache:
+    detail-ttl: 1h
+    stampede-protection-enabled: true
+    lock-ttl: 5s
+    lock-wait-timeout: 1s
+    lock-retry-interval: 20ms
