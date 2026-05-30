@@ -17,29 +17,22 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
-import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
 public class VideoPersistenceAdapter implements LoadVideoPort, SaveVideoPort {
-    private static final RedisScript<Long> UNLOCK_SCRIPT = new DefaultRedisScript<>(
-            "if redis.call('get', KEYS[1]) == ARGV[1] then "
-                    + "return redis.call('del', KEYS[1]) "
-                    + "else return 0 end",
-            Long.class
-    );
-
     private final VideoJpaRepository videoJpaRepository;
     private final VideoCustomRepository videoCustomRepository;
     private final RedisTemplate<String, Long> redisTemplate;
     private final StringRedisTemplate stringRedisTemplate;
+    private final RedissonClient redissonClient;
     private final ObjectMapper objectMapper;
     private final VideoCacheProperties videoCacheProperties;
     private final Counter cacheHitCounter;
@@ -54,6 +47,7 @@ public class VideoPersistenceAdapter implements LoadVideoPort, SaveVideoPort {
             VideoCustomRepository videoCustomRepository,
             RedisTemplate<String, Long> redisTemplate,
             StringRedisTemplate stringRedisTemplate,
+            RedissonClient redissonClient,
             ObjectMapper objectMapper,
             VideoCacheProperties videoCacheProperties,
             MeterRegistry meterRegistry
@@ -62,6 +56,7 @@ public class VideoPersistenceAdapter implements LoadVideoPort, SaveVideoPort {
         this.videoCustomRepository = videoCustomRepository;
         this.redisTemplate = redisTemplate;
         this.stringRedisTemplate = stringRedisTemplate;
+        this.redissonClient = redissonClient;
         this.objectMapper = objectMapper;
         this.videoCacheProperties = videoCacheProperties;
         this.cacheHitCounter = meterRegistry.counter("video.cache.hit");
@@ -93,10 +88,9 @@ public class VideoPersistenceAdapter implements LoadVideoPort, SaveVideoPort {
 
     private Video loadVideoWithStampedeProtection(String videoId, String key) {
         String lockKey = getVideoLockKey(videoId);
-        String lockValue = UUID.randomUUID().toString();
+        RLock lock = redissonClient.getLock(lockKey);
 
-        Boolean lockAcquired = acquireLock(lockKey, lockValue);
-        if (Boolean.TRUE.equals(lockAcquired)) {
+        if (tryAcquireLock(lock, lockKey)) {
             cacheLockAcquiredCounter.increment();
             try {
                 Video cachedVideo = getCachedVideo(key);
@@ -107,13 +101,8 @@ public class VideoPersistenceAdapter implements LoadVideoPort, SaveVideoPort {
 
                 return loadVideoFromDbAndCache(videoId, key);
             } finally {
-                releaseLock(lockKey, lockValue);
+                releaseLock(lock, lockKey);
             }
-        }
-
-        if (lockAcquired == null) {
-            cacheLockTimeoutCounter.increment();
-            return loadVideoFromDbAndCache(videoId, key);
         }
 
         cacheLockWaitCounter.increment();
@@ -124,7 +113,7 @@ public class VideoPersistenceAdapter implements LoadVideoPort, SaveVideoPort {
         }
 
         cacheLockTimeoutCounter.increment();
-        return loadVideoFromDbAndCache(videoId, key);
+        throw new IllegalStateException("비디오 캐시 생성 대기 시간이 초과되었습니다. videoId=" + videoId);
     }
 
     private Video getCachedVideo(String key) {
@@ -161,21 +150,23 @@ public class VideoPersistenceAdapter implements LoadVideoPort, SaveVideoPort {
         }
     }
 
-    private Boolean acquireLock(String lockKey, String lockValue) {
+    private boolean tryAcquireLock(RLock lock, String lockKey) {
         try {
-            return stringRedisTemplate.opsForValue().setIfAbsent(
-                    lockKey, lockValue, videoCacheProperties.getLockTtl());
-        } catch (Exception e) {
-            log.warn("캐시 stampede lock 획득 실패, DB fallback을 사용합니다. lockKey={}", lockKey, e);
-            return null;
+            return lock.tryLock(100, 3, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            cacheLockTimeoutCounter.increment();
+            throw new IllegalStateException("캐시 stampede lock 획득 중 인터럽트되었습니다. lockKey=" + lockKey, e);
         }
     }
 
-    private void releaseLock(String lockKey, String lockValue) {
-        try {
-            stringRedisTemplate.execute(UNLOCK_SCRIPT, List.of(lockKey), lockValue);
-        } catch (Exception e) {
-            log.warn("캐시 stampede lock 해제 실패. lockKey={}", lockKey, e);
+    private void releaseLock(RLock lock, String lockKey) {
+        if (lock.isHeldByCurrentThread()) {
+            try {
+                lock.unlock();
+            } catch (Exception e) {
+                log.warn("캐시 stampede lock 해제 실패. lockKey={}", lockKey, e);
+            }
         }
     }
 

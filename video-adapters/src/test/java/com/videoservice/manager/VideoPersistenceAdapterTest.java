@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -35,10 +36,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
-import org.springframework.data.redis.core.script.RedisScript;
 
 @ExtendWith(MockitoExtension.class)
 class VideoPersistenceAdapterTest {
@@ -50,6 +52,8 @@ class VideoPersistenceAdapterTest {
     private final VideoCustomRepository videoCustomRepository = mock(VideoCustomRepository.class);
     private final RedisTemplate<String, Long> redisTemplate = mock(RedisTemplate.class, Mockito.RETURNS_DEEP_STUBS);
     private final StringRedisTemplate stringRedisTemplate = mock(StringRedisTemplate.class, Mockito.RETURNS_DEEP_STUBS);
+    private final RedissonClient redissonClient = mock(RedissonClient.class);
+    private final RLock lock = mock(RLock.class);
     private final ValueOperations<String, Long> valueOperations = mock(ValueOperations.class);
     private final ValueOperations<String, String> stringValueOperations = mock(ValueOperations.class);
     // 프라이빗 필드 직렬화/역직렬화를 위해 필드 가시성 설정
@@ -68,12 +72,14 @@ class VideoPersistenceAdapterTest {
                 videoCustomRepository,
                 redisTemplate,
                 stringRedisTemplate,
+                redissonClient,
                 objectMapper,
                 videoCacheProperties,
                 meterRegistry
         );
         lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         lenient().when(stringRedisTemplate.opsForValue()).thenReturn(stringValueOperations);
+        lenient().when(redissonClient.getLock(anyString())).thenReturn(lock);
     }
 
     @Nested
@@ -143,7 +149,8 @@ class VideoPersistenceAdapterTest {
             videoCacheProperties.setStampedeProtectionEnabled(true);
             videoCacheProperties.setDetailTtl(Duration.ofSeconds(3));
             var videoJpaEntity = VideoJpaEntityFixtures.stub("video1");
-            given(stringValueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class))).willReturn(true);
+            given(lock.tryLock(100, 3, TimeUnit.MILLISECONDS)).willReturn(true);
+            given(lock.isHeldByCurrentThread()).willReturn(true);
             given(videoJpaRepository.findById("video1")).willReturn(Optional.of(videoJpaEntity));
 
             // When
@@ -153,7 +160,10 @@ class VideoPersistenceAdapterTest {
             then(result).extracting("id").isEqualTo("video1");
             verify(videoJpaRepository).findById("video1");
             verify(stringValueOperations).set("video:detail:video1", objectMapper.writeValueAsString(result), Duration.ofSeconds(3));
-            verify(stringRedisTemplate).execute(any(RedisScript.class), any(List.class), anyString());
+            verify(redissonClient).getLock("video:detail:lock:video1");
+            verify(lock).tryLock(100, 3, TimeUnit.MILLISECONDS);
+            verify(lock).isHeldByCurrentThread();
+            verify(lock).unlock();
             then(meterRegistry.counter("video.cache.lock.acquired").count()).isEqualTo(1);
             then(meterRegistry.counter("video.cache.db.load").count()).isEqualTo(1);
         }
@@ -165,7 +175,8 @@ class VideoPersistenceAdapterTest {
             var video = VideoFixtures.stub("video1");
             var json = objectMapper.writeValueAsString(video);
             given(stringValueOperations.get("video:detail:video1")).willReturn(null, json);
-            given(stringValueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class))).willReturn(true);
+            given(lock.tryLock(100, 3, TimeUnit.MILLISECONDS)).willReturn(true);
+            given(lock.isHeldByCurrentThread()).willReturn(true);
 
             // When
             var result = sut.loadVideo("video1");
@@ -174,6 +185,7 @@ class VideoPersistenceAdapterTest {
             then(result).extracting("id").isEqualTo("video1");
             verify(videoJpaRepository, never()).findById(anyString());
             verify(stringValueOperations, never()).set(anyString(), anyString(), any(Duration.class));
+            verify(lock).unlock();
             then(meterRegistry.counter("video.cache.lock.acquired").count()).isEqualTo(1);
             then(meterRegistry.counter("video.cache.db.load").count()).isZero();
         }
@@ -187,7 +199,7 @@ class VideoPersistenceAdapterTest {
             var video = VideoFixtures.stub("video1");
             var json = objectMapper.writeValueAsString(video);
             given(stringValueOperations.get("video:detail:video1")).willReturn(null, json);
-            given(stringValueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class))).willReturn(false);
+            given(lock.tryLock(100, 3, TimeUnit.MILLISECONDS)).willReturn(false);
 
             // When
             var result = sut.loadVideo("video1");
@@ -200,44 +212,39 @@ class VideoPersistenceAdapterTest {
         }
 
         @Test
-        void cacheMiss_whenLockWaitTimeout_then_fallbackToDbLoad() {
+        void cacheMiss_whenLockWaitTimeout_then_throwExceptionWithoutDbLoad() throws Exception {
             // Given
             videoCacheProperties.setStampedeProtectionEnabled(true);
             videoCacheProperties.setLockWaitTimeout(Duration.ofMillis(2));
             videoCacheProperties.setLockRetryInterval(Duration.ofMillis(1));
-            var videoJpaEntity = VideoJpaEntityFixtures.stub("video1");
-            given(stringValueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class))).willReturn(false);
-            given(videoJpaRepository.findById("video1")).willReturn(Optional.of(videoJpaEntity));
+            given(lock.tryLock(100, 3, TimeUnit.MILLISECONDS)).willReturn(false);
 
             // When
-            var result = sut.loadVideo("video1");
+            var result = thenThrownBy(() -> sut.loadVideo("video1"));
 
             // Then
-            then(result).extracting("id").isEqualTo("video1");
-            verify(videoJpaRepository).findById("video1");
+            result.isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("video1");
+            verify(videoJpaRepository, never()).findById(anyString());
             then(meterRegistry.counter("video.cache.lock.wait").count()).isEqualTo(1);
             then(meterRegistry.counter("video.cache.lock.timeout").count()).isEqualTo(1);
         }
 
         @Test
-        void cacheMiss_whenLockAcquired_then_unlockWithLuaScriptAndUuidValue() {
+        void cacheMiss_whenLockAcquiredButCurrentThreadDoesNotHoldLock_then_doesNotUnlock() throws Exception {
             // Given
             videoCacheProperties.setStampedeProtectionEnabled(true);
             var videoJpaEntity = VideoJpaEntityFixtures.stub("video1");
-            given(stringValueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class))).willReturn(true);
+            given(lock.tryLock(100, 3, TimeUnit.MILLISECONDS)).willReturn(true);
+            given(lock.isHeldByCurrentThread()).willReturn(false);
             given(videoJpaRepository.findById("video1")).willReturn(Optional.of(videoJpaEntity));
-            ArgumentCaptor<String> lockValueCaptor = ArgumentCaptor.forClass(String.class);
 
             // When
             sut.loadVideo("video1");
 
             // Then
-            verify(stringValueOperations).setIfAbsent(
-                    Mockito.eq("video:detail:lock:video1"),
-                    lockValueCaptor.capture(),
-                    Mockito.eq(Duration.ofSeconds(5))
-            );
-            verify(stringRedisTemplate).execute(any(RedisScript.class), Mockito.eq(List.of("video:detail:lock:video1")), Mockito.eq(lockValueCaptor.getValue()));
+            verify(lock).isHeldByCurrentThread();
+            verify(lock, never()).unlock();
         }
     }
 
