@@ -212,22 +212,26 @@ class VideoPersistenceAdapterTest {
         }
 
         @Test
-        void cacheMiss_whenLockWaitTimeout_then_throwExceptionWithoutDbLoad() throws Exception {
+        void cacheMiss_whenLockWaitTimeout_then_loadDbAndCache() throws Exception {
             // Given
             videoCacheProperties.setStampedeProtectionEnabled(true);
+            videoCacheProperties.setDetailTtl(Duration.ofSeconds(3));
             videoCacheProperties.setLockWaitTimeout(Duration.ofMillis(2));
             videoCacheProperties.setLockRetryInterval(Duration.ofMillis(1));
+            var videoJpaEntity = VideoJpaEntityFixtures.stub("video1");
             given(lock.tryLock(100, 3, TimeUnit.MILLISECONDS)).willReturn(false);
+            given(videoJpaRepository.findById("video1")).willReturn(Optional.of(videoJpaEntity));
 
             // When
-            var result = thenThrownBy(() -> sut.loadVideo("video1"));
+            var result = sut.loadVideo("video1");
 
             // Then
-            result.isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("video1");
-            verify(videoJpaRepository, never()).findById(anyString());
+            then(result).extracting("id").isEqualTo("video1");
+            verify(videoJpaRepository).findById("video1");
+            verify(stringValueOperations).set("video:detail:video1", objectMapper.writeValueAsString(result), Duration.ofSeconds(3));
             then(meterRegistry.counter("video.cache.lock.wait").count()).isEqualTo(1);
             then(meterRegistry.counter("video.cache.lock.timeout").count()).isEqualTo(1);
+            then(meterRegistry.counter("video.cache.db.load").count()).isEqualTo(1);
         }
 
         @Test

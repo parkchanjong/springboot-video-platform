@@ -113,7 +113,7 @@ public class VideoPersistenceAdapter implements LoadVideoPort, SaveVideoPort {
         }
 
         cacheLockTimeoutCounter.increment();
-        throw new IllegalStateException("비디오 캐시 생성 대기 시간이 초과되었습니다. videoId=" + videoId);
+        return loadVideoFromDbAndCache(videoId, key);
     }
 
     private Video getCachedVideo(String key) {
