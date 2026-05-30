@@ -311,7 +311,7 @@ HOT_VIDEO_ID=video-seed-001 \
 k6 run k6-scripts/scenarios/load/video-cache-stampede.js
 ```
 
-원인은 Cache-Aside 구조에서 핫키 TTL이 만료되는 순간 모든 요청이 동시에 cache miss를 맞고 MySQL 조회로 진입하는 것입니다. 개선 후 모드는 Redis `SET NX PX` 기반 per-key lock을 사용하고, 락 획득 후 DB 조회 전 캐시를 한 번 더 확인합니다. 락을 얻지 못한 요청은 짧게 대기하며 캐시를 재조회하고, 제한 시간 내 캐시가 채워지면 DB를 조회하지 않습니다.
+원인은 Cache-Aside 구조에서 핫키 TTL이 만료되는 순간 모든 요청이 동시에 cache miss를 맞고 MySQL 조회로 진입하는 것입니다. 개선 후 모드는 Redisson `RLock` 기반 per-key lock을 사용하고, 락 획득 후 DB 조회 전 캐시를 한 번 더 확인합니다. 락을 얻지 못한 요청은 짧게 대기하며 캐시를 재조회하고, 제한 시간 내 캐시가 채워지면 DB를 조회하지 않습니다. 끝까지 캐시가 비어 있으면 대기 제한 시간 초과를 기록한 뒤 DB fallback으로 응답을 유지합니다.
 
 Actuator/Prometheus에서 확인할 애플리케이션 메트릭입니다.
 
@@ -331,7 +331,7 @@ Actuator/Prometheus에서 확인할 애플리케이션 메트릭입니다.
 | 개선 전 | 200 | 3s | 약 200건 | 0건 | 0건 | 약 300ms | stampede protection off, 임시값 |
 | 개선 후 | 200 | 3s | 약 1건 | 1건 | 0건 | 약 80ms | stampede protection on, 임시값 |
 
-이력서용 요약 문장입니다. Redis Cache-Aside 구조에서 핫키 TTL 만료 시 발생하는 cache stampede를 재현하고, Redis `SET NX PX` 기반 per-key lock과 double checked locking으로 중복 DB 조회를 단일 요청 수준으로 제한하도록 개선했습니다.
+이력서용 요약 문장입니다. Redis Cache-Aside 구조에서 핫키 TTL 만료 시 발생하는 cache stampede를 재현하고, Redisson `RLock` 기반 per-key lock과 double checked locking으로 중복 DB 조회를 단일 요청 수준으로 제한하되 대기 제한 시간 초과 시 DB fallback으로 응답 가용성을 유지합니다.
 
 ### 결과를 JSON으로 저장
 

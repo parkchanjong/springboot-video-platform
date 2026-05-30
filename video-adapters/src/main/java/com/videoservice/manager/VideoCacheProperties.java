@@ -8,7 +8,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class VideoCacheProperties {
     private Duration detailTtl = Duration.ofHours(1);
     private boolean stampedeProtectionEnabled = true;
-    private Duration lockTtl = Duration.ofSeconds(5);
     private Duration lockWaitTimeout = Duration.ofSeconds(1);
     private Duration lockRetryInterval = Duration.ofMillis(20);
 
@@ -26,14 +25,6 @@ public class VideoCacheProperties {
 
     public void setStampedeProtectionEnabled(boolean stampedeProtectionEnabled) {
         this.stampedeProtectionEnabled = stampedeProtectionEnabled;
-    }
-
-    public Duration getLockTtl() {
-        return lockTtl;
-    }
-
-    public void setLockTtl(Duration lockTtl) {
-        this.lockTtl = lockTtl;
     }
 
     public Duration getLockWaitTimeout() {
