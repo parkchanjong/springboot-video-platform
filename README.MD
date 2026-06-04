@@ -427,17 +427,3 @@ k6 run --out influxdb=http://localhost:8086/k6 k6-scripts/scenarios/stress/stres
 | `rename`   | 패키지 혹은 폴더명, 클래스명 수정 (단독으로 시행하였을 시)                     |
 | `remove`   | 패키지 혹은 폴더, 클래스를 삭제하였을 때 (단독으로 시행하였을 시)                 |
 
-
-
-### todo
-* TTL 분리
-* jitter
-* per-key lock
-* cache stampede 방지
-* k6 부하테스트
-* DB CPU 수치
-* videoId partition key
-* idempotency key
-* DLQ
-* 장애 시 재처리 전략
-* 성능 수치의 측정 문서
